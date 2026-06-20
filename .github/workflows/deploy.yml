@@ -1,4 +1,4 @@
-# ─────────────────────────────────────────────────────────────────────────────
+﻿# ─────────────────────────────────────────────────────────────────────────────
 # Spotly – CI/CD Pipeline
 #
 # SETUP ONCE (GitHub → Settings → Secrets and variables):
@@ -116,25 +116,28 @@ jobs:
           SQL_SERVER: ${{ steps.infra.outputs.SQL_SERVER }}
           SQL_DATABASE: ${{ steps.infra.outputs.SQL_DATABASE }}
         run: |
-          pip install pyodbc --quiet
-          python3 << 'PYEOF'
-          import subprocess, struct, os, pyodbc
-          token = subprocess.check_output(['az','account','get-access-token','--resource','https://database.windows.net/','--query','accessToken','-o','tsv']).decode().strip()
-          tokb  = token.encode('utf-16-le')
-          attrs = {1256: struct.pack('=I', len(tokb)) + tokb}
-          app = os.environ['APP_NAME']
-          srv = os.environ['SQL_SERVER']
-          db  = os.environ['SQL_DATABASE']
-          conn = pyodbc.connect(f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={srv}.database.windows.net,1433;DATABASE={db};Encrypt=yes;TrustServerCertificate=no;', attrs_before=attrs)
-          conn.autocommit = True
-          cur = conn.cursor()
-          cur.execute(f"IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = N'{app}') EXEC('CREATE USER [{app}] FROM EXTERNAL PROVIDER')")
-          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datareader' AND m.name=N'{app}') EXEC('ALTER ROLE db_datareader ADD MEMBER [{app}]')")
-          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datawriter' AND m.name=N'{app}') EXEC('ALTER ROLE db_datawriter ADD MEMBER [{app}]')")
-          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_ddladmin' AND m.name=N'{app}') EXEC('ALTER ROLE db_ddladmin ADD MEMBER [{app}]')")
-          conn.close()
-          print(f"SQL access granted to {app}")
-          PYEOF
+          LATEST=$(curl -fsSL https://api.github.com/repos/microsoft/go-sqlcmd/releases/latest | jq -r .tag_name)
+          curl -fsSL "https://github.com/microsoft/go-sqlcmd/releases/download/${LATEST}/sqlcmd_linux_amd64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin sqlcmd
+
+          cat > /tmp/grant.sql << EOF
+          IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = N'${APP_NAME}')
+            EXEC('CREATE USER [${APP_NAME}] FROM EXTERNAL PROVIDER');
+          IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datareader' AND m.name=N'${APP_NAME}')
+            EXEC('ALTER ROLE db_datareader ADD MEMBER [${APP_NAME}]');
+          IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datawriter' AND m.name=N'${APP_NAME}')
+            EXEC('ALTER ROLE db_datawriter ADD MEMBER [${APP_NAME}]');
+          IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_ddladmin' AND m.name=N'${APP_NAME}')
+            EXEC('ALTER ROLE db_ddladmin ADD MEMBER [${APP_NAME}]');
+          EOF
+
+          sqlcmd \
+            -S "${SQL_SERVER}.database.windows.net" \
+            -d "${SQL_DATABASE}" \
+            --authentication-method=ActiveDirectoryDefault \
+            -i /tmp/grant.sql
+
+          echo "SQL access granted to ${APP_NAME}"
 
       - name: Deploy app
         run: |
@@ -194,25 +197,28 @@ jobs:
           SQL_SERVER: ${{ steps.infra.outputs.SQL_SERVER }}
           SQL_DATABASE: ${{ steps.infra.outputs.SQL_DATABASE }}
         run: |
-          pip install pyodbc --quiet
-          python3 << 'PYEOF'
-          import subprocess, struct, os, pyodbc
-          token = subprocess.check_output(['az','account','get-access-token','--resource','https://database.windows.net/','--query','accessToken','-o','tsv']).decode().strip()
-          tokb  = token.encode('utf-16-le')
-          attrs = {1256: struct.pack('=I', len(tokb)) + tokb}
-          app = os.environ['APP_NAME']
-          srv = os.environ['SQL_SERVER']
-          db  = os.environ['SQL_DATABASE']
-          conn = pyodbc.connect(f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={srv}.database.windows.net,1433;DATABASE={db};Encrypt=yes;TrustServerCertificate=no;', attrs_before=attrs)
-          conn.autocommit = True
-          cur = conn.cursor()
-          cur.execute(f"IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = N'{app}') EXEC('CREATE USER [{app}] FROM EXTERNAL PROVIDER')")
-          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datareader' AND m.name=N'{app}') EXEC('ALTER ROLE db_datareader ADD MEMBER [{app}]')")
-          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datawriter' AND m.name=N'{app}') EXEC('ALTER ROLE db_datawriter ADD MEMBER [{app}]')")
-          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_ddladmin' AND m.name=N'{app}') EXEC('ALTER ROLE db_ddladmin ADD MEMBER [{app}]')")
-          conn.close()
-          print(f"SQL access granted to {app}")
-          PYEOF
+          LATEST=$(curl -fsSL https://api.github.com/repos/microsoft/go-sqlcmd/releases/latest | jq -r .tag_name)
+          curl -fsSL "https://github.com/microsoft/go-sqlcmd/releases/download/${LATEST}/sqlcmd_linux_amd64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin sqlcmd
+
+          cat > /tmp/grant.sql << EOF
+          IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = N'${APP_NAME}')
+            EXEC('CREATE USER [${APP_NAME}] FROM EXTERNAL PROVIDER');
+          IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datareader' AND m.name=N'${APP_NAME}')
+            EXEC('ALTER ROLE db_datareader ADD MEMBER [${APP_NAME}]');
+          IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datawriter' AND m.name=N'${APP_NAME}')
+            EXEC('ALTER ROLE db_datawriter ADD MEMBER [${APP_NAME}]');
+          IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_ddladmin' AND m.name=N'${APP_NAME}')
+            EXEC('ALTER ROLE db_ddladmin ADD MEMBER [${APP_NAME}]');
+          EOF
+
+          sqlcmd \
+            -S "${SQL_SERVER}.database.windows.net" \
+            -d "${SQL_DATABASE}" \
+            --authentication-method=ActiveDirectoryDefault \
+            -i /tmp/grant.sql
+
+          echo "SQL access granted to ${APP_NAME}"
 
       - name: Deploy app
         run: |
@@ -272,25 +278,28 @@ jobs:
           SQL_SERVER: ${{ steps.infra.outputs.SQL_SERVER }}
           SQL_DATABASE: ${{ steps.infra.outputs.SQL_DATABASE }}
         run: |
-          pip install pyodbc --quiet
-          python3 << 'PYEOF'
-          import subprocess, struct, os, pyodbc
-          token = subprocess.check_output(['az','account','get-access-token','--resource','https://database.windows.net/','--query','accessToken','-o','tsv']).decode().strip()
-          tokb  = token.encode('utf-16-le')
-          attrs = {1256: struct.pack('=I', len(tokb)) + tokb}
-          app = os.environ['APP_NAME']
-          srv = os.environ['SQL_SERVER']
-          db  = os.environ['SQL_DATABASE']
-          conn = pyodbc.connect(f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={srv}.database.windows.net,1433;DATABASE={db};Encrypt=yes;TrustServerCertificate=no;', attrs_before=attrs)
-          conn.autocommit = True
-          cur = conn.cursor()
-          cur.execute(f"IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = N'{app}') EXEC('CREATE USER [{app}] FROM EXTERNAL PROVIDER')")
-          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datareader' AND m.name=N'{app}') EXEC('ALTER ROLE db_datareader ADD MEMBER [{app}]')")
-          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datawriter' AND m.name=N'{app}') EXEC('ALTER ROLE db_datawriter ADD MEMBER [{app}]')")
-          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_ddladmin' AND m.name=N'{app}') EXEC('ALTER ROLE db_ddladmin ADD MEMBER [{app}]')")
-          conn.close()
-          print(f"SQL access granted to {app}")
-          PYEOF
+          LATEST=$(curl -fsSL https://api.github.com/repos/microsoft/go-sqlcmd/releases/latest | jq -r .tag_name)
+          curl -fsSL "https://github.com/microsoft/go-sqlcmd/releases/download/${LATEST}/sqlcmd_linux_amd64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin sqlcmd
+
+          cat > /tmp/grant.sql << EOF
+          IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = N'${APP_NAME}')
+            EXEC('CREATE USER [${APP_NAME}] FROM EXTERNAL PROVIDER');
+          IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datareader' AND m.name=N'${APP_NAME}')
+            EXEC('ALTER ROLE db_datareader ADD MEMBER [${APP_NAME}]');
+          IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datawriter' AND m.name=N'${APP_NAME}')
+            EXEC('ALTER ROLE db_datawriter ADD MEMBER [${APP_NAME}]');
+          IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_ddladmin' AND m.name=N'${APP_NAME}')
+            EXEC('ALTER ROLE db_ddladmin ADD MEMBER [${APP_NAME}]');
+          EOF
+
+          sqlcmd \
+            -S "${SQL_SERVER}.database.windows.net" \
+            -d "${SQL_DATABASE}" \
+            --authentication-method=ActiveDirectoryDefault \
+            -i /tmp/grant.sql
+
+          echo "SQL access granted to ${APP_NAME}"
 
       - name: Deploy app
         run: |
