@@ -1,0 +1,178 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Spotly – CI/CD Pipeline
+#
+# SETUP ONCE (GitHub → Settings → Secrets and variables):
+#
+# ▸ Repository secrets:
+#     AZURE_CREDENTIALS     JSON SP credentials:
+#                           {"clientId":"…","clientSecret":"…",
+#                            "subscriptionId":"…","tenantId":"…"}
+#     AZURE_SUBSCRIPTION_ID Azure subscription ID
+#     ENTRA_TENANT_ID       Azure AD tenant ID for the app
+#     ENTRA_CLIENT_ID       App registration client ID (Spotly app roles)
+#
+# ▸ Environments (Settings → Environments):
+#     development   – no protection rules  →  auto-deploys on push to dev
+#       variable: ENVIRONMENT_NAME = black
+#     staging       – add "Required reviewers" protection rule
+#       variable: ENVIRONMENT_NAME = black-stg
+#     production    – add "Required reviewers" protection rule
+#       variable: ENVIRONMENT_NAME = black-prod
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Deploy Spotly
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        type: choice
+        required: true
+        options: [staging, production]
+
+jobs:
+  # ── Build ──────────────────────────────────────────────────────────────────
+  build:
+    name: Build API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish
+        run: |
+          dotnet publish backend/Spotly.Api/Spotly.Api.csproj \
+            -c Release -r linux-x64 --self-contained false \
+            -o publish_out
+
+      - name: Zip artifact
+        run: cd publish_out && zip -r ../deploy.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api-package
+          path: deploy.zip
+          retention-days: 3
+
+  # ── Deploy – Development (auto on push to dev) ─────────────────────────────
+  deploy-dev:
+    name: Deploy → Development
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: api-package
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy infra
+        id: infra
+        uses: azure/arm-deploy@v2
+        with:
+          scope: subscription
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          region: italynorth
+          template: ./infra/main.bicep
+          parameters: >-
+            environmentName=${{ vars.ENVIRONMENT_NAME }}
+            entraTenantId=${{ secrets.ENTRA_TENANT_ID }}
+            entraClientId=${{ secrets.ENTRA_CLIENT_ID }}
+
+      - name: Deploy app
+        run: |
+          az webapp deploy \
+            --resource-group "${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}" \
+            --src-path deploy.zip \
+            --type zip
+
+  # ── Deploy – Staging (manual, requires approval) ──────────────────────────
+  deploy-staging:
+    name: Deploy → Staging
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: api-package
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy infra
+        id: infra
+        uses: azure/arm-deploy@v2
+        with:
+          scope: subscription
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          region: italynorth
+          template: ./infra/main.bicep
+          parameters: >-
+            environmentName=${{ vars.ENVIRONMENT_NAME }}
+            entraTenantId=${{ secrets.ENTRA_TENANT_ID }}
+            entraClientId=${{ secrets.ENTRA_CLIENT_ID }}
+
+      - name: Deploy app
+        run: |
+          az webapp deploy \
+            --resource-group "${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}" \
+            --src-path deploy.zip \
+            --type zip
+
+  # ── Deploy – Production (manual, requires approval) ───────────────────────
+  deploy-production:
+    name: Deploy → Production
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: api-package
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy infra
+        id: infra
+        uses: azure/arm-deploy@v2
+        with:
+          scope: subscription
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          region: italynorth
+          template: ./infra/main.bicep
+          parameters: >-
+            environmentName=${{ vars.ENVIRONMENT_NAME }}
+            entraTenantId=${{ secrets.ENTRA_TENANT_ID }}
+            entraClientId=${{ secrets.ENTRA_CLIENT_ID }}
+
+      - name: Deploy app
+        run: |
+          az webapp deploy \
+            --resource-group "${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}" \
+            --src-path deploy.zip \
+            --type zip
