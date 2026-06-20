@@ -111,40 +111,30 @@ jobs:
 
       - name: Grant SQL access to managed identity
         if: steps.infra.outputs.SQL_SERVER != ''
+        env:
+          APP_NAME: ${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}
+          SQL_SERVER: ${{ steps.infra.outputs.SQL_SERVER }}
+          SQL_DATABASE: ${{ steps.infra.outputs.SQL_DATABASE }}
         run: |
-          APP_NAME="${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}"
-          SQL_SERVER="${{ steps.infra.outputs.SQL_SERVER }}"
-          SQL_DATABASE="${{ steps.infra.outputs.SQL_DATABASE }}"
-          RG="${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}"
-
-          az extension add --name rdbms-connect --upgrade --yes
-
-          az sql db query \
-            --server "$SQL_SERVER" \
-            --database "$SQL_DATABASE" \
-            --resource-group "$RG" \
-            --auth-mode ActiveDirectoryDefault \
-            --queries "
-          IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = '$APP_NAME')
-            CREATE USER [$APP_NAME] FROM EXTERNAL PROVIDER;
-          IF NOT EXISTS (
-            SELECT 1 FROM sys.database_role_members drm
-            JOIN sys.database_principals r ON drm.role_principal_id = r.principal_id
-            JOIN sys.database_principals m ON drm.member_principal_id = m.principal_id
-            WHERE r.name = 'db_datareader' AND m.name = '$APP_NAME'
-          ) ALTER ROLE db_datareader ADD MEMBER [$APP_NAME];
-          IF NOT EXISTS (
-            SELECT 1 FROM sys.database_role_members drm
-            JOIN sys.database_principals r ON drm.role_principal_id = r.principal_id
-            JOIN sys.database_principals m ON drm.member_principal_id = m.principal_id
-            WHERE r.name = 'db_datawriter' AND m.name = '$APP_NAME'
-          ) ALTER ROLE db_datawriter ADD MEMBER [$APP_NAME];
-          IF NOT EXISTS (
-            SELECT 1 FROM sys.database_role_members drm
-            JOIN sys.database_principals r ON drm.role_principal_id = r.principal_id
-            JOIN sys.database_principals m ON drm.member_principal_id = m.principal_id
-            WHERE r.name = 'db_ddladmin' AND m.name = '$APP_NAME'
-          ) ALTER ROLE db_ddladmin ADD MEMBER [$APP_NAME];"
+          pip install pyodbc --quiet
+          python3 << 'PYEOF'
+          import subprocess, struct, os, pyodbc
+          token = subprocess.check_output(['az','account','get-access-token','--resource','https://database.windows.net/','--query','accessToken','-o','tsv']).decode().strip()
+          tokb  = token.encode('utf-16-le')
+          attrs = {1256: struct.pack('=I', len(tokb)) + tokb}
+          app = os.environ['APP_NAME']
+          srv = os.environ['SQL_SERVER']
+          db  = os.environ['SQL_DATABASE']
+          conn = pyodbc.connect(f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={srv}.database.windows.net,1433;DATABASE={db};Encrypt=yes;TrustServerCertificate=no;', attrs_before=attrs)
+          conn.autocommit = True
+          cur = conn.cursor()
+          cur.execute(f"IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = N'{app}') EXEC('CREATE USER [{app}] FROM EXTERNAL PROVIDER')")
+          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datareader' AND m.name=N'{app}') EXEC('ALTER ROLE db_datareader ADD MEMBER [{app}]')")
+          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datawriter' AND m.name=N'{app}') EXEC('ALTER ROLE db_datawriter ADD MEMBER [{app}]')")
+          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_ddladmin' AND m.name=N'{app}') EXEC('ALTER ROLE db_ddladmin ADD MEMBER [{app}]')")
+          conn.close()
+          print(f"SQL access granted to {app}")
+          PYEOF
 
       - name: Deploy app
         run: |
@@ -199,40 +189,30 @@ jobs:
 
       - name: Grant SQL access to managed identity
         if: steps.infra.outputs.SQL_SERVER != ''
+        env:
+          APP_NAME: ${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}
+          SQL_SERVER: ${{ steps.infra.outputs.SQL_SERVER }}
+          SQL_DATABASE: ${{ steps.infra.outputs.SQL_DATABASE }}
         run: |
-          APP_NAME="${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}"
-          SQL_SERVER="${{ steps.infra.outputs.SQL_SERVER }}"
-          SQL_DATABASE="${{ steps.infra.outputs.SQL_DATABASE }}"
-          RG="${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}"
-
-          az extension add --name rdbms-connect --upgrade --yes
-
-          az sql db query \
-            --server "$SQL_SERVER" \
-            --database "$SQL_DATABASE" \
-            --resource-group "$RG" \
-            --auth-mode ActiveDirectoryDefault \
-            --queries "
-          IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = '$APP_NAME')
-            CREATE USER [$APP_NAME] FROM EXTERNAL PROVIDER;
-          IF NOT EXISTS (
-            SELECT 1 FROM sys.database_role_members drm
-            JOIN sys.database_principals r ON drm.role_principal_id = r.principal_id
-            JOIN sys.database_principals m ON drm.member_principal_id = m.principal_id
-            WHERE r.name = 'db_datareader' AND m.name = '$APP_NAME'
-          ) ALTER ROLE db_datareader ADD MEMBER [$APP_NAME];
-          IF NOT EXISTS (
-            SELECT 1 FROM sys.database_role_members drm
-            JOIN sys.database_principals r ON drm.role_principal_id = r.principal_id
-            JOIN sys.database_principals m ON drm.member_principal_id = m.principal_id
-            WHERE r.name = 'db_datawriter' AND m.name = '$APP_NAME'
-          ) ALTER ROLE db_datawriter ADD MEMBER [$APP_NAME];
-          IF NOT EXISTS (
-            SELECT 1 FROM sys.database_role_members drm
-            JOIN sys.database_principals r ON drm.role_principal_id = r.principal_id
-            JOIN sys.database_principals m ON drm.member_principal_id = m.principal_id
-            WHERE r.name = 'db_ddladmin' AND m.name = '$APP_NAME'
-          ) ALTER ROLE db_ddladmin ADD MEMBER [$APP_NAME];"
+          pip install pyodbc --quiet
+          python3 << 'PYEOF'
+          import subprocess, struct, os, pyodbc
+          token = subprocess.check_output(['az','account','get-access-token','--resource','https://database.windows.net/','--query','accessToken','-o','tsv']).decode().strip()
+          tokb  = token.encode('utf-16-le')
+          attrs = {1256: struct.pack('=I', len(tokb)) + tokb}
+          app = os.environ['APP_NAME']
+          srv = os.environ['SQL_SERVER']
+          db  = os.environ['SQL_DATABASE']
+          conn = pyodbc.connect(f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={srv}.database.windows.net,1433;DATABASE={db};Encrypt=yes;TrustServerCertificate=no;', attrs_before=attrs)
+          conn.autocommit = True
+          cur = conn.cursor()
+          cur.execute(f"IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = N'{app}') EXEC('CREATE USER [{app}] FROM EXTERNAL PROVIDER')")
+          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datareader' AND m.name=N'{app}') EXEC('ALTER ROLE db_datareader ADD MEMBER [{app}]')")
+          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datawriter' AND m.name=N'{app}') EXEC('ALTER ROLE db_datawriter ADD MEMBER [{app}]')")
+          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_ddladmin' AND m.name=N'{app}') EXEC('ALTER ROLE db_ddladmin ADD MEMBER [{app}]')")
+          conn.close()
+          print(f"SQL access granted to {app}")
+          PYEOF
 
       - name: Deploy app
         run: |
@@ -287,40 +267,30 @@ jobs:
 
       - name: Grant SQL access to managed identity
         if: steps.infra.outputs.SQL_SERVER != ''
+        env:
+          APP_NAME: ${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}
+          SQL_SERVER: ${{ steps.infra.outputs.SQL_SERVER }}
+          SQL_DATABASE: ${{ steps.infra.outputs.SQL_DATABASE }}
         run: |
-          APP_NAME="${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}"
-          SQL_SERVER="${{ steps.infra.outputs.SQL_SERVER }}"
-          SQL_DATABASE="${{ steps.infra.outputs.SQL_DATABASE }}"
-          RG="${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}"
-
-          az extension add --name rdbms-connect --upgrade --yes
-
-          az sql db query \
-            --server "$SQL_SERVER" \
-            --database "$SQL_DATABASE" \
-            --resource-group "$RG" \
-            --auth-mode ActiveDirectoryDefault \
-            --queries "
-          IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = '$APP_NAME')
-            CREATE USER [$APP_NAME] FROM EXTERNAL PROVIDER;
-          IF NOT EXISTS (
-            SELECT 1 FROM sys.database_role_members drm
-            JOIN sys.database_principals r ON drm.role_principal_id = r.principal_id
-            JOIN sys.database_principals m ON drm.member_principal_id = m.principal_id
-            WHERE r.name = 'db_datareader' AND m.name = '$APP_NAME'
-          ) ALTER ROLE db_datareader ADD MEMBER [$APP_NAME];
-          IF NOT EXISTS (
-            SELECT 1 FROM sys.database_role_members drm
-            JOIN sys.database_principals r ON drm.role_principal_id = r.principal_id
-            JOIN sys.database_principals m ON drm.member_principal_id = m.principal_id
-            WHERE r.name = 'db_datawriter' AND m.name = '$APP_NAME'
-          ) ALTER ROLE db_datawriter ADD MEMBER [$APP_NAME];
-          IF NOT EXISTS (
-            SELECT 1 FROM sys.database_role_members drm
-            JOIN sys.database_principals r ON drm.role_principal_id = r.principal_id
-            JOIN sys.database_principals m ON drm.member_principal_id = m.principal_id
-            WHERE r.name = 'db_ddladmin' AND m.name = '$APP_NAME'
-          ) ALTER ROLE db_ddladmin ADD MEMBER [$APP_NAME];"
+          pip install pyodbc --quiet
+          python3 << 'PYEOF'
+          import subprocess, struct, os, pyodbc
+          token = subprocess.check_output(['az','account','get-access-token','--resource','https://database.windows.net/','--query','accessToken','-o','tsv']).decode().strip()
+          tokb  = token.encode('utf-16-le')
+          attrs = {1256: struct.pack('=I', len(tokb)) + tokb}
+          app = os.environ['APP_NAME']
+          srv = os.environ['SQL_SERVER']
+          db  = os.environ['SQL_DATABASE']
+          conn = pyodbc.connect(f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={srv}.database.windows.net,1433;DATABASE={db};Encrypt=yes;TrustServerCertificate=no;', attrs_before=attrs)
+          conn.autocommit = True
+          cur = conn.cursor()
+          cur.execute(f"IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = N'{app}') EXEC('CREATE USER [{app}] FROM EXTERNAL PROVIDER')")
+          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datareader' AND m.name=N'{app}') EXEC('ALTER ROLE db_datareader ADD MEMBER [{app}]')")
+          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_datawriter' AND m.name=N'{app}') EXEC('ALTER ROLE db_datawriter ADD MEMBER [{app}]')")
+          cur.execute(f"IF NOT EXISTS (SELECT 1 FROM sys.database_role_members drm JOIN sys.database_principals r ON drm.role_principal_id=r.principal_id JOIN sys.database_principals m ON drm.member_principal_id=m.principal_id WHERE r.name='db_ddladmin' AND m.name=N'{app}') EXEC('ALTER ROLE db_ddladmin ADD MEMBER [{app}]')")
+          conn.close()
+          print(f"SQL access granted to {app}")
+          PYEOF
 
       - name: Deploy app
         run: |
