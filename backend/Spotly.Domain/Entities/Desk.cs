@@ -10,6 +10,7 @@ public record class DeskSpot
     public bool IsStanding { get; set; }
     public bool HasWindow { get; set; }
     public ResourceStatus Status { get; set; } = ResourceStatus.Available;
+    public string? ReservedForDepartment { get; set; }
 }
 
 public class DeskBooking
@@ -21,4 +22,6 @@ public class DeskBooking
     public BookingStatus Status { get; set; } = BookingStatus.Active;
     public DateTime? LockedUntil { get; set; }
     public string? LockedByUserId { get; set; }
+    public DateTime? CheckedInAtUtc { get; set; }
+    public DateTime CheckInDeadlineUtc { get; set; }
 }

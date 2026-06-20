@@ -1,4 +1,7 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Spotly.Domain.Entities;
+using Spotly.Infrastructure.Persistence;
 using Spotly.Infrastructure.Repositories;
 
 namespace Spotly.Tests;
@@ -6,69 +9,61 @@ namespace Spotly.Tests;
 public class InMemoryParkingRepositoryTests
 {
     [Fact]
-    public async Task GetSpotsAsync_ReturnsSeedData()
+    public async Task ConcurrentBookingsForSameSpot_HaveExactlyOneWinner()
     {
-        var repo = new InMemoryParkingRepository();
-        var spots = await repo.GetSpotsAsync("HQ");
-        Assert.NotEmpty(spots);
+        var repository = await CreateRepositoryAsync();
+        var date = DateOnly.FromDateTime(DateTime.UtcNow);
+        var attempts = await Task.WhenAll(Enumerable.Range(1, 12).Select(index => repository.TryCreateBookingAsync(new ParkingBooking
+        {
+            SpotId = "P01", UserId = $"user-{index}", BookingDate = date, CheckInDeadlineUtc = DateTime.UtcNow.AddHours(2),
+        })));
+        Assert.Single(attempts, x => x.Succeeded);
+        Assert.Equal(11, attempts.Count(x => x.Failure == BookingFailure.ResourceUnavailable));
     }
 
     [Fact]
-    public async Task CreateBooking_SetsSpotToOccupied()
+    public async Task SecondParkingBookingForUserAndDate_IsRejected()
     {
-        var repo = new InMemoryParkingRepository();
+        var repository = await CreateRepositoryAsync();
         var date = DateOnly.FromDateTime(DateTime.UtcNow);
-        var booking = new ParkingBooking
-        {
-            SpotId = "P01",
-            UserId = "test-user",
-            BookingDate = date,
-            Status = BookingStatus.Active,
-        };
-
-        await repo.CreateBookingAsync(booking);
-
-        var spots = (await repo.GetSpotsAsync("HQ")).ToList();
-        var spot = spots.First(s => s.SpotId == "P01");
-        Assert.Equal(ResourceStatus.Occupied, spot.Status);
+        var first = await repository.TryCreateBookingAsync(NewBooking("P01", "same-user", date));
+        var second = await repository.TryCreateBookingAsync(NewBooking("P02", "same-user", date));
+        Assert.True(first.Succeeded);
+        Assert.Equal(BookingFailure.AlreadyBooked, second.Failure);
     }
 
     [Fact]
-    public async Task GetActiveBooking_ReturnsBookingAfterCreate()
+    public async Task ExpiredUncheckedBooking_IsReleasedAsNoShow()
     {
-        var repo = new InMemoryParkingRepository();
+        var repository = await CreateRepositoryAsync();
         var date = DateOnly.FromDateTime(DateTime.UtcNow);
-        await repo.CreateBookingAsync(new ParkingBooking
+        var created = await repository.TryCreateBookingAsync(new ParkingBooking
         {
-            SpotId = "P02",
-            UserId = "u-test",
-            BookingDate = date,
-            Status = BookingStatus.Active,
+            SpotId = "P01", UserId = "late-user", BookingDate = date, CheckInDeadlineUtc = DateTime.UtcNow.AddMinutes(-1),
         });
-
-        var found = await repo.GetActiveBookingAsync("u-test", date);
-        Assert.NotNull(found);
-        Assert.Equal("P02", found.SpotId);
+        var released = await repository.ReleaseNoShowsAsync(DateTime.UtcNow);
+        Assert.True(created.Succeeded);
+        Assert.Contains(released, x => x.ResourceId == "P01");
+        Assert.Null(await repository.GetActiveBookingAsync("late-user", date));
     }
 
-    [Fact]
-    public async Task CancelBooking_SetsSpotBackToAvailable()
+    private static ParkingBooking NewBooking(string spotId, string userId, DateOnly date) => new()
     {
-        var repo = new InMemoryParkingRepository();
-        var date = DateOnly.FromDateTime(DateTime.UtcNow);
-        var booking = await repo.CreateBookingAsync(new ParkingBooking
-        {
-            SpotId = "P04",
-            UserId = "u-cancel",
-            BookingDate = date,
-            Status = BookingStatus.Active,
-        });
+        SpotId = spotId, UserId = userId, BookingDate = date, CheckInDeadlineUtc = DateTime.UtcNow.AddHours(2),
+    };
 
-        var result = await repo.CancelBookingAsync(booking.BookingId, "u-cancel");
+    private static async Task<InMemoryParkingRepository> CreateRepositoryAsync()
+    {
+        var options = new DbContextOptionsBuilder<SpotlyDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString(), new InMemoryDatabaseRoot()).Options;
+        var factory = new TestDbContextFactory(options);
+        await using var db = factory.CreateDbContext();
+        await SpotlyDbSeeder.SeedAsync(db, DateOnly.FromDateTime(DateTime.UtcNow));
+        return new InMemoryParkingRepository(factory);
+    }
 
-        Assert.True(result);
-        var spots = (await repo.GetSpotsAsync("HQ")).ToList();
-        var spot = spots.First(s => s.SpotId == "P04");
-        Assert.Equal(ResourceStatus.Available, spot.Status);
+    private sealed class TestDbContextFactory(DbContextOptions<SpotlyDbContext> options) : IDbContextFactory<SpotlyDbContext>
+    {
+        public SpotlyDbContext CreateDbContext() => new(options);
     }
 }

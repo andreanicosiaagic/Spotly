@@ -1,120 +1,127 @@
+using Microsoft.EntityFrameworkCore;
 using Spotly.Domain.Entities;
 using Spotly.Domain.Interfaces;
-using Spotly.Infrastructure.Seed;
+using Spotly.Domain.Rules;
+using Spotly.Infrastructure.Persistence;
 
 namespace Spotly.Infrastructure.Repositories;
 
-public class InMemoryDeskRepository : IDeskRepository
+public sealed class InMemoryDeskRepository(IDbContextFactory<SpotlyDbContext> factory) : IDeskRepository
 {
-    private readonly List<DeskSpot> _spots = SeedData.DeskSpots();
-    private readonly List<DeskBooking> _bookings = [];
-    private readonly Lock _lock = new();
+    private readonly Lock _gate = new();
 
-    public Task<IEnumerable<DeskSpot>> GetSpotsAsync(string locationId)
+    public Task<IEnumerable<DeskSpot>> GetSpotsAsync(string locationId, DateOnly date)
     {
-        lock (_lock)
+        lock (_gate)
         {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var bookedIds = _bookings
-                .Where(b => b.BookingDate == today && b.Status == BookingStatus.Active)
-                .Select(b => b.DeskId)
-                .ToHashSet();
-
-            var result = _spots
-                .Where(s => s.LocationId == locationId)
-                .Select(s => s with { Status = bookedIds.Contains(s.DeskId) ? ResourceStatus.Occupied : s.Status })
-                .AsEnumerable();
-            return Task.FromResult(result);
+            using var db = factory.CreateDbContext();
+            var now = DateTime.UtcNow;
+            var bookings = db.DeskBookings.AsNoTracking().Where(x => x.BookingDate == date && x.Status == BookingStatus.Active).ToList();
+            var result = db.DeskSpots.AsNoTracking().Where(x => x.LocationId == locationId).ToList().Select(spot => spot with
+            {
+                Status = bookings.Any(x => x.DeskId == spot.DeskId && x.LockedUntil == null) ? ResourceStatus.Occupied
+                    : bookings.Any(x => x.DeskId == spot.DeskId && x.LockedUntil > now) ? ResourceStatus.Pending : spot.Status,
+            }).ToArray();
+            return Task.FromResult<IEnumerable<DeskSpot>>(result);
         }
     }
 
     public Task<DeskSpot?> GetSpotByIdAsync(string deskId)
     {
-        lock (_lock) { return Task.FromResult(_spots.FirstOrDefault(s => s.DeskId == deskId)); }
+        using var db = factory.CreateDbContext();
+        return Task.FromResult(db.DeskSpots.AsNoTracking().FirstOrDefault(x => x.DeskId == deskId));
     }
 
     public Task<IEnumerable<DeskBooking>> GetBookingsByDateAsync(string locationId, DateOnly date)
     {
-        lock (_lock)
-        {
-            var deskIds = _spots.Where(s => s.LocationId == locationId).Select(s => s.DeskId).ToHashSet();
-            return Task.FromResult(_bookings.Where(b => b.BookingDate == date && deskIds.Contains(b.DeskId)).AsEnumerable());
-        }
+        using var db = factory.CreateDbContext();
+        var ids = db.DeskSpots.Where(x => x.LocationId == locationId).Select(x => x.DeskId).ToHashSet();
+        return Task.FromResult<IEnumerable<DeskBooking>>(db.DeskBookings.AsNoTracking().Where(x => x.BookingDate == date && ids.Contains(x.DeskId)).ToArray());
     }
 
     public Task<DeskBooking?> GetActiveBookingAsync(string userId, DateOnly date)
     {
-        lock (_lock)
+        using var db = factory.CreateDbContext();
+        return Task.FromResult(db.DeskBookings.AsNoTracking().FirstOrDefault(x => x.UserId == userId && x.BookingDate == date &&
+            x.Status == BookingStatus.Active && x.LockedUntil == null));
+    }
+
+    public Task<BookingAttempt<DeskBooking>> TryCreateBookingAsync(DeskBooking booking, string? department)
+    {
+        lock (_gate)
         {
-            return Task.FromResult(_bookings.FirstOrDefault(b =>
-                b.UserId == userId && b.BookingDate == date && b.Status == BookingStatus.Active));
+            using var db = factory.CreateDbContext();
+            var now = DateTime.UtcNow;
+            var desk = db.DeskSpots.FirstOrDefault(x => x.DeskId == booking.DeskId);
+            if (desk is null) return Task.FromResult(new BookingAttempt<DeskBooking>(null, BookingFailure.NotFound));
+            if (desk.ReservedForDepartment is not null && !string.Equals(desk.ReservedForDepartment, department, StringComparison.OrdinalIgnoreCase))
+                return Task.FromResult(new BookingAttempt<DeskBooking>(null, BookingFailure.Ineligible));
+            if (desk.Status is ResourceStatus.Occupied or ResourceStatus.Reserved || db.DeskBookings.Any(x => x.DeskId == booking.DeskId &&
+                x.BookingDate == booking.BookingDate && x.Status == BookingStatus.Active && (x.LockedUntil == null || x.LockedUntil > now) && x.LockedByUserId != booking.UserId))
+                return Task.FromResult(new BookingAttempt<DeskBooking>(null, BookingFailure.ResourceUnavailable));
+            if (db.DeskBookings.Any(x => x.UserId == booking.UserId && x.BookingDate == booking.BookingDate && x.Status == BookingStatus.Active && x.LockedUntil == null))
+                return Task.FromResult(new BookingAttempt<DeskBooking>(null, BookingFailure.AlreadyBooked));
+            var ownLock = db.DeskBookings.FirstOrDefault(x => x.DeskId == booking.DeskId && x.BookingDate == booking.BookingDate &&
+                x.Status == BookingStatus.Active && x.LockedByUserId == booking.UserId && x.LockedUntil > now);
+            if (ownLock is null) db.DeskBookings.Add(booking);
+            else { ownLock.LockedUntil = null; ownLock.LockedByUserId = null; ownLock.CheckInDeadlineUtc = booking.CheckInDeadlineUtc; booking = ownLock; }
+            db.SaveChanges();
+            return Task.FromResult(new BookingAttempt<DeskBooking>(booking, BookingFailure.None));
         }
     }
 
-    public Task<DeskBooking> CreateBookingAsync(DeskBooking booking)
+    public Task<CancellationOutcome> CancelBookingAsync(string bookingId, string userId, DateTime utcNow)
     {
-        lock (_lock)
+        lock (_gate)
         {
-            _bookings.Add(booking);
-            var spot = _spots.FirstOrDefault(s => s.DeskId == booking.DeskId);
-            if (spot is not null) spot.Status = ResourceStatus.Occupied;
-            return Task.FromResult(booking);
+            using var db = factory.CreateDbContext();
+            var booking = db.DeskBookings.FirstOrDefault(x => x.BookingId == bookingId && x.UserId == userId && x.Status == BookingStatus.Active);
+            if (booking is null) return Task.FromResult(new CancellationOutcome(false));
+            booking.Status = BookingRules.IsFreeCancellation(booking.BookingDate, utcNow) ? BookingStatus.Cancelled : BookingStatus.NoShow;
+            db.SaveChanges();
+            return Task.FromResult(new CancellationOutcome(true, booking.Status, booking.DeskId, booking.BookingDate));
         }
     }
 
-    public Task<bool> CancelBookingAsync(string bookingId, string userId)
+    public Task<bool> CheckInAsync(string bookingId, string userId, DateTime utcNow)
     {
-        lock (_lock)
+        lock (_gate)
         {
-            var booking = _bookings.FirstOrDefault(b => b.BookingId == bookingId && b.UserId == userId);
+            using var db = factory.CreateDbContext();
+            var booking = db.DeskBookings.FirstOrDefault(x => x.BookingId == bookingId && x.UserId == userId && x.Status == BookingStatus.Active &&
+                x.LockedUntil == null && x.CheckInDeadlineUtc >= utcNow);
             if (booking is null) return Task.FromResult(false);
-            booking.Status = BookingStatus.Cancelled;
-            var spot = _spots.FirstOrDefault(s => s.DeskId == booking.DeskId);
-            if (spot is not null) spot.Status = ResourceStatus.Available;
-            return Task.FromResult(true);
+            booking.CheckedInAtUtc = utcNow; db.SaveChanges(); return Task.FromResult(true);
         }
     }
 
     public Task<bool> TryAcquireLockAsync(string deskId, string userId, TimeSpan lockDuration)
     {
-        lock (_lock)
+        lock (_gate)
         {
-            var spot = _spots.FirstOrDefault(s => s.DeskId == deskId);
-            if (spot is null || spot.Status != ResourceStatus.Available) return Task.FromResult(false);
-            var existingLock = _bookings.FirstOrDefault(b =>
-                b.DeskId == deskId &&
-                b.LockedUntil.HasValue &&
-                b.LockedUntil > DateTime.UtcNow &&
-                b.LockedByUserId != userId);
-            if (existingLock is not null) return Task.FromResult(false);
-            spot.Status = ResourceStatus.Pending;
-            _bookings.Add(new DeskBooking
-            {
-                DeskId = deskId,
-                UserId = userId,
-                BookingDate = DateOnly.FromDateTime(DateTime.UtcNow),
-                Status = BookingStatus.Active,
-                LockedUntil = DateTime.UtcNow.Add(lockDuration),
-                LockedByUserId = userId,
-            });
-            return Task.FromResult(true);
+            using var db = factory.CreateDbContext();
+            var now = DateTime.UtcNow; var date = DateOnly.FromDateTime(now);
+            var desk = db.DeskSpots.FirstOrDefault(x => x.DeskId == deskId);
+            if (desk is null || desk.Status != ResourceStatus.Available || db.DeskBookings.Any(x => x.DeskId == deskId && x.BookingDate == date &&
+                x.Status == BookingStatus.Active && (x.LockedUntil == null || x.LockedUntil > now))) return Task.FromResult(false);
+            db.DeskBookings.Add(new DeskBooking { DeskId = deskId, UserId = userId, BookingDate = date, Status = BookingStatus.Active,
+                LockedUntil = now.Add(lockDuration), LockedByUserId = userId });
+            db.SaveChanges(); return Task.FromResult(true);
         }
     }
 
-    public Task ReleaseExpiredLocksAsync()
+    public Task<IReadOnlyList<ReleasedResource>> ReleaseExpiredLocksAsync(DateTime utcNow) => ReleaseAsync(
+        x => x.Status == BookingStatus.Active && x.LockedUntil != null && x.LockedUntil < utcNow, BookingStatus.Cancelled);
+    public Task<IReadOnlyList<ReleasedResource>> ReleaseNoShowsAsync(DateTime utcNow) => ReleaseAsync(
+        x => x.Status == BookingStatus.Active && x.LockedUntil == null && x.CheckedInAtUtc == null && x.CheckInDeadlineUtc < utcNow, BookingStatus.NoShow);
+
+    private Task<IReadOnlyList<ReleasedResource>> ReleaseAsync(Func<DeskBooking, bool> predicate, BookingStatus status)
     {
-        lock (_lock)
+        lock (_gate)
         {
-            var expired = _bookings.Where(b => b.LockedUntil.HasValue && b.LockedUntil < DateTime.UtcNow).ToList();
-            foreach (var b in expired)
-            {
-                b.LockedUntil = null;
-                b.LockedByUserId = null;
-                b.Status = BookingStatus.Cancelled;
-                var spot = _spots.FirstOrDefault(s => s.DeskId == b.DeskId);
-                if (spot?.Status == ResourceStatus.Pending) spot.Status = ResourceStatus.Available;
-            }
+            using var db = factory.CreateDbContext(); var expired = db.DeskBookings.Where(predicate).ToList();
+            foreach (var booking in expired) booking.Status = status; db.SaveChanges();
+            return Task.FromResult<IReadOnlyList<ReleasedResource>>(expired.Select(x => new ReleasedResource(x.DeskId, x.BookingDate)).ToArray());
         }
-        return Task.CompletedTask;
     }
 }

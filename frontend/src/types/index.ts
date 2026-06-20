@@ -56,9 +56,12 @@ export interface DeskBooking {
 // M3 — Lunch
 export interface Restaurant {
   restaurantId: string;
-  locationId: string;
   name: string;
   capacity: number;
+  availableSeats: number;
+  sequence: number;
+  updatedAtUtc: string;
+  partnerChannelConfigured: boolean;
 }
 
 export interface RestaurantSlot {
@@ -97,6 +100,53 @@ export interface LunchBooking {
   lunchBoxId?: string;
   status: 'active' | 'cancelled';
   deliveryStatus: 'pending' | 'preparing' | 'delivered' | 'cancelled';
+  partnerStatus?: 'notRequired' | 'pendingPartner' | 'confirmed' | 'rejected';
+  partnerCode?: string;
+  partnerReference?: string;
+  partnerAvailableSeats?: number;
+}
+
+export interface RestaurantBookingResponse {
+  booking: LunchBooking;
+  partnerCode: string;
+  availableSeats: number;
+  partnerReference?: string;
+}
+
+export interface RestaurantMessageEvent {
+  restaurantId: string;
+  kind: string;
+  outcome: string;
+  sequence: number;
+  receivedAtUtc: string;
+}
+
+export interface RestaurantAvailabilityUpdate extends Restaurant {
+  source: string;
+}
+
+export type WorkMode = 'office' | 'remote' | 'unknown';
+export type CalendarAvailability = 'free' | 'tentative' | 'busy' | 'outOfOffice' | 'unknown';
+
+export interface TeamMemberMatch {
+  userId: string;
+  displayName: string;
+  workMode: WorkMode;
+  locationId?: string;
+  locationLabel?: string;
+  calendarStatus: CalendarAvailability;
+  isMatch: boolean;
+  reason: string;
+}
+
+export interface TeamAvailabilityMatch {
+  date: string;
+  windowStartUtc: string;
+  windowEndUtc: string;
+  currentLocationId?: string;
+  currentLocationLabel?: string;
+  matchingMembers: number;
+  members: TeamMemberMatch[];
 }
 
 // Availability update (SignalR payload)

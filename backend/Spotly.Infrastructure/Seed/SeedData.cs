@@ -11,7 +11,7 @@ public static class SeedData
         new() { SpotId = "P03", LocationId = "HQ", Level = 1, SpotNumber = "A03", Type = ParkingSpotType.Standard, Status = ResourceStatus.Occupied  },
         new() { SpotId = "P04", LocationId = "HQ", Level = 1, SpotNumber = "A04", Type = ParkingSpotType.Standard, Status = ResourceStatus.Available },
         new() { SpotId = "P05", LocationId = "HQ", Level = 1, SpotNumber = "A05", Type = ParkingSpotType.Ev,       Status = ResourceStatus.Available },
-        new() { SpotId = "P06", LocationId = "HQ", Level = 1, SpotNumber = "A06", Type = ParkingSpotType.Disabled, Status = ResourceStatus.Reserved  },
+        new() { SpotId = "P06", LocationId = "HQ", Level = 1, SpotNumber = "A06", Type = ParkingSpotType.Disabled, Status = ResourceStatus.Available },
         new() { SpotId = "P07", LocationId = "HQ", Level = 2, SpotNumber = "B01", Type = ParkingSpotType.Standard, Status = ResourceStatus.Available },
         new() { SpotId = "P08", LocationId = "HQ", Level = 2, SpotNumber = "B02", Type = ParkingSpotType.Standard, Status = ResourceStatus.Available },
         new() { SpotId = "P09", LocationId = "HQ", Level = 2, SpotNumber = "B03", Type = ParkingSpotType.Standard, Status = ResourceStatus.Available },
@@ -26,14 +26,14 @@ public static class SeedData
         new() { DeskId = "D04", LocationId = "HQ", Floor = 2, Zone = "Alpha", HasMonitor = true,  IsStanding = false, HasWindow = false, Status = ResourceStatus.Available },
         new() { DeskId = "D05", LocationId = "HQ", Floor = 2, Zone = "Beta",  HasMonitor = false, IsStanding = false, HasWindow = true,  Status = ResourceStatus.Available },
         new() { DeskId = "D06", LocationId = "HQ", Floor = 2, Zone = "Beta",  HasMonitor = true,  IsStanding = false, HasWindow = false, Status = ResourceStatus.Available },
-        new() { DeskId = "D07", LocationId = "HQ", Floor = 3, Zone = "Gamma", HasMonitor = true,  IsStanding = false, HasWindow = true,  Status = ResourceStatus.Available },
+        new() { DeskId = "D07", LocationId = "HQ", Floor = 3, Zone = "Gamma", HasMonitor = true,  IsStanding = false, HasWindow = true,  Status = ResourceStatus.Available, ReservedForDepartment = "Engineering" },
         new() { DeskId = "D08", LocationId = "HQ", Floor = 3, Zone = "Gamma", HasMonitor = false, IsStanding = true,  HasWindow = false, Status = ResourceStatus.Available },
     ];
 
     public static List<Restaurant> Restaurants() =>
     [
-        new() { RestaurantId = "R01", LocationId = "HQ", Name = "Bistrot Verde", Capacity = 40 },
-        new() { RestaurantId = "R02", LocationId = "HQ", Name = "La Tavola",     Capacity = 30 },
+        new() { RestaurantId = "R01", LocationId = "HQ", Name = "Bistrot Verde", Capacity = 40, WhatsAppNumber = "+390200000101", TelegramChatId = "demo-r01" },
+        new() { RestaurantId = "R02", LocationId = "HQ", Name = "La Tavola", Capacity = 30, WhatsAppNumber = "+390200000102", TelegramChatId = "demo-r02" },
     ];
 
     public static List<RestaurantSlot> RestaurantSlots(DateOnly date) =>
@@ -59,5 +59,11 @@ public static class SeedData
         new() { BoxId = "LB01", Name = "Box Classico",  Description = "Pasta, secondo, contorno e frutta",       Allergens = "glutine", IsAvailable = true },
         new() { BoxId = "LB02", Name = "Box Vegano",    Description = "Cereali, legumi, verdure di stagione",     Allergens = "",        IsAvailable = true },
         new() { BoxId = "LB03", Name = "Box Proteico",  Description = "Proteine, verdure, senza glutine",         Allergens = "",        IsAvailable = true },
+    ];
+
+    public static List<RestaurantAvailability> RestaurantAvailabilities(DateOnly date) =>
+    [
+        new() { RestaurantId = "R01", BookingDate = date, AvailableSeats = 18, Sequence = 1, LastMessageId = "seed-r01", UpdatedAtUtc = DateTime.UtcNow },
+        new() { RestaurantId = "R02", BookingDate = date, AvailableSeats = 9, Sequence = 1, LastMessageId = "seed-r02", UpdatedAtUtc = DateTime.UtcNow },
     ];
 }

@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; background:#E7DED0; }
+  ::-webkit-scrollbar{ width:0; height:0; }
+  @keyframes spSheet{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
+  @keyframes spScrim{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes spToast{ 0%{ transform:transl(-50%,16px); opacity:0; } 12%{ transform:translate(-50%,0); opacity:1; } 88%{ transform:translate(-50%,0); opacity:1; } 100%{ transform:translate(-50%,-6px); opacity:0; } }
+  @keyframes spPop{ from{ transform:scale(.96); opacity:0; } to{ transform:scale(1); opacity:1; } }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#E7DED0; display:flex; align-items:center; justify-content:center; font-family:'Plus Jakarta Sans',sans-serif;">
+<div style="width:100%; max-width:430px; height:100vh; max-height:932px; background:#FBF6EF; position:relative; overflow:hidden; box-shadow:0 30px 80px rgba(60,45,30,.22); display:flex; flex-direction:column;">
+
+  <!-- STATUS BAR -->
+  <div style="flex:none; height:30px; display:flex; align-items:center; justify-content:space-between; padding:0 22px; font-size:13px; font-weight:700; color:#2B2622; background:transparent; z-index:5;">
+    <span>9:41</span>
+    <span style="display:flex; gap:5px; align-items:center;">
+      <span style="font-family:'Material Symbols Rounded'; font-size:16px;">signal_cellular_alt</span>
+      <span style="font-family:'Material Symbols Rounded'; font-size:16px;">wifi</span>
+      <span style="font-family:'Material Symbols Rounded'; font-size:17px;">battery_full</span>
+    </span>
+  </div>
+
+  <!-- ===================== LOGIN ===================== -->
+  <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:1; display:flex; flex-direction:column; padding:0 28px 34px;">
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <div style="width:38px; height:38px; border-radius:12px; background:#EC6A4D; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px rgba(236,106,77,.4);">
+          <span style="font-family:'Material Symbols Rounded'; font-size:24px; color:#fff; font-variation-settings:'FILL' 1;">pin_drop</span>
+        </div>
+        <span style="font-family:'Bricolage Grotesque'; font-size:30px; font-weight:800; color:#2B2622; letter-spacing:-.02em;">spotly</span>
+      </div>
+      <h1 style="font-family:'Bricolage Grotesque'; font-size:38px; line-height:1.08; font-weight:800; color:#2B2622; letter-spacing:-.02em; margin:30px 0 14px; text-wrap:balance;">La tua giornata in ufficio, in pochi tap.</h1>
+      <p style="font-size:16px; line-height:1.5; color:#726A60; margin:0 0 26px;">Parcheggio, postazione e pranzo. Tutto prenotato in anticipo, con disponibilità in tempo reale.</p>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <sc-for list="{{ loginFeatures }}" as="f" hint-placeholder-count="3">
+          <div style="display:flex; align-items:center; gap:13px; background:#fff; border:1px solid #ECE3D6; border-radius:16px; padding:13px 15px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:{{ f.tint }}; color:{{ f.color }}; display:flex; align-items:center; justify-content:center; flex:none;">
+              <span style="font-family:'Material Symbols Rounded'; font-size:23px; font-variation-settings:'FILL' 1;">{{ f.icon }}</span>
+            </div>
+            <div style="min-width:0;">
+              <div style="font-size:14.5px; font-weight:700; color:#2B2622;">{{ f.title }}</div>
+              <div style="font-size:12.5px; color:#928879;">{{ f.sub }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <button onClick="{{ login }}" style="width:100%; border:none; cursor:pointer; background:#2B2622; color:#fff; border-radius:16px; padding:16px; font-family:'Plus Jakarta Sans'; font-size:15.5px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:11px; box-shadow:0 8px 22px rgba(43,38,34,.28);">
+      <span style="display:grid; grid-template-columns:9px 9px; grid-template-rows:9px 9px; gap:2px;">
+        <span style="background:#F25022; border-radius:1px;"></span><span style="background:#7FBA00; border-radius:1px;"></span>
+        <span style="background:#00A4EF; border-radius:1px;"></span><span style="background:#FFB900; border-radius:1px;"></span>
+      </span>
+      Accedi con Microsoft
+    </button>
+    <button onClick="{{ login }}" style="width:100%; border:none; cursor:pointer; background:transparent; color:#726A60; padding:14px 0 0; font-family:'Plus Jakarta Sans'; font-size:14px; font-weight:600;">Continua come Giulia (demo)</button>
+  </div>
+  </sc-if>
+
+  <!-- ===================== APP ===================== -->
+  <sc-if value="{{ inApp }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;">
+
+    <!-- ---------- DASHBOARD ---------- -->
+    <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+    <div style="padding-bottom:26px;">
+      <div style="padding:14px 22px 10px; display:flex; align-items:flex-start; justify-content:space-between;">
+        <div>
+          <div style="font-size:13px; color:#A89E92; font-weight:600;">{{ dateFull }}</div>
+          <div style="font-family:'Bricolage Grotesque'; font-size:26px; font-weight:800; color:#2B2622; letter-spacing:-.015em; margin-top:1px;">Ciao, Giulia</div>
+        </div>
+        <div onClick="{{ goProfile }}" style="width:44px; height:44px; border-radius:50%; background:#EC6A4D; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; cursor:pointer; box-shadow:0 4px 12px rgba(236,106,77,.35); flex:none;">GM</div>
+      </div>
+
+      <div style="display:flex; gap:8px; padding:4px 22px 16px; overflow-x:auto;">
+        <sc-for list="{{ daysView }}" as="d" hint-placeholder-count="7">
+          <div onClick="{{ d.onClick }}" style="flex:none; width:50px; padding:9px 0; border-radius:15px; background:{{ d.bg }}; border:1.5px solid {{ d.bd }}; text-align:center; cursor:pointer;">
+            <div style="font-size:10px; font-weight:800; letter-spacing:.05em; color:{{ d.dowColor }};">{{ d.dow }}</div>
+            <div style="font-size:17px; font-weight:700; color:{{ d.fg }}; margin-top:3px;">{{ d.d }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="margin:0 22px 16px; background:#2B2622; border-radius:20px; padding:16px 18px; color:#fff; display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div style="font-size:13px; color:#C9BDAB; font-weight:600;">La tua giornata</div>
+          <div style="font-family:'Bricolage Grotesque'; font-size:19px; font-weight:700; margin-top:2px;">{{ progressLabel }}</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <sc-for list="{{ progressDots }}" as="p" hint-placeholder-count="3">
+            <span style="width:9px; height:9px; border-radius:50%; background:{{ p.bg }};"></span>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:#A89E92; padding:0 22px 8px;">PRENOTAZIONI</div>
+
+      <!-- Parcheggio card -->
+      <div onClick="{{ goPark }}" style="margin:0 22px 11px; background:#fff; border:1px solid #ECE3D6; border-radius:20px; padding:15px; display:flex; align-items:center; gap:13px; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.03);">
+        <div style="width:48px; height:48px; border-radius:14px; background:#E9F0FB; color:#3E6BB0; display:flex; align-items:center; justify-content:center; flex:none;">
+          <span style="font-family:'Material Symbols Rounded'; font-size:26px; font-variation-settings:'FILL' 1;">directions_car</span>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:15.5px; font-weight:700; color:#2B2622;">Parcheggio</div>
+          <div style="font-size:13px; color:#726A60; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ parkLine }}</div>
+        </div>
+        <span style="font-size:11px; font-weight:800; padding:5px 10px; border-radius:9px; background:{{ parkChipBg }}; color:{{ parkChipFg }}; white-space:nowrap;">{{ parkChip }}</span>
+      </div>
+
+      <!-- Postazione card -->
+      <div onClick="{{ goDesk }}" style="margin:0 22px 11px; background:#fff; border:1px solid #ECE3D6; border-radius:20px; padding:15px; display:flex; align-items:center; gap:13px; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.03);">
+        <div style="width:48px; height:48px; border-radius:14px; background:#E7F3EC; color:#2F8A5C; display:flex; align-items:center; justify-content:center; flex:none;">
+          <span style="font-family:'Material Symbols Rounded'; font-size:26px; font-variation-settings:'FILL' 1;">chair</span>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:15.5px; font-weight:700; color:#2B2622;">Postazione</div>
+          <div style="font-size:13px; color:#726A60; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ deskLine }}</div>
+        </div>
+        <span style="font-size:11px; font-weight:800; padding:5px 10px; border-radius:9px; background:{{ deskChipBg }}; color:{{ deskChipFg }}; white-space:nowrap;">{{ deskChip }}</span>
+      </div>
+
+      <!-- Pranzo card -->
+      <div onClick="{{ goLunch }}" style="margin:0 22px 4px; background:#fff; border:1px solid #ECE3D6; border-radius:20px; padding:15px; display:flex; align-items:center; gap:13px; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.03);">
+        <div style="width:48px; height:48px; border-radius:14px; background:#FCEDE7; color:#EC6A4D; display:flex; align-items:center; justify-content:center; flex:none;">
+          <span style="font-family:'Material Symbols Rounded'; font-size:26px; font-variation-settings:'FILL' 1;">restaurant</span>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:15.5px; font-weight:700; color:#2B2622;">Pranzo</div>
+          <div style="font-size:13px; color:#726A60; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ lunchLine }}</div>
+        </div>
+        <span style="font-size:11px; font-weight:800; padding:5px 10px; border-radius:9px; background:{{ lunchChipBg }}; color:{{ lunchChipFg }}; white-space:nowrap;">{{ lunchChip }}</span>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:#A89E92; padding:20px 22px 8px;">IL TUO TEAM</div>
+      <div style="margin:0 22px; background:#FFF7F2; border:1px solid #F6DFD3; border-radius:20px; padding:16px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div style="font-size:15px; font-weight:700; color:#2B2622;">Team Product</div>
+          <span style="font-size:12px; font-weight:700; color:#2F8A5C; background:#E7F3EC; padding:4px 9px; border-radius:8px;">3 oggi in ufficio</span>
+        </div>
+        <div style="display:flex; align-items:center; margin:13px 0 15px;">
+          <sc-for list="{{ teamAvatars }}" as="m" hint-placeholder-count="5">
+            <div style="width:38px; height:38px; border-radius:50%; background:{{ m.color }}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; margin-left:-9px; border:2.5px solid #FFF7F2; opacity:{{ m.opacity }};">{{ m.initials }}</div>
+          </sc-for>
+        </div>
+        <div onClick="{{ goTeam }}" style="display:flex; align-items:center; gap:8px; background:#EC6A4D; color:#fff; border-radius:13px; padding:13px; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(236,106,77,.3);">
+          <span style="font-family:'Material Symbols Rounded'; font-size:20px;">groups</span>
+          <span style="font-size:14.5px; font-weight:700;">Prenota per il team</span>
+        </div>
+      </div>
+
+      <div onClick="{{ goTeam }}" style="margin:12px 22px 0; display:flex; align-items:center; gap:10px; background:#F2EDE4; border-radius:14px; padding:12px 14px; cursor:pointer;">
+        <span style="font-family:'Material Symbols Rounded'; font-size:20px; color:#B07D22;">tips_and_updates</span>
+        <span style="font-size:13px; color:#5C544A; line-height:1.35;">Spotly suggerisce <b style="color:#2B2622;">martedì 1 lug</b> come office day: 80% del team disponibile.</span>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ---------- PARCHEGGIO ---------- -->
+    <sc-if value="{{ isPark }}" hint-placeholder-val="{{ true }}">
+    <div style="padding-bottom:26px;">
+      <div style="padding:8px 22px 6px; display:flex; align-items:center; gap:12px;">
+        <div onClick="{{ goToday }}" style="width:38px; height:38px; border-radius:12px; background:#fff; border:1px solid #ECE3D6; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none;">
+          <span style="font-family:'Material Symbols Rounded'; font-size:22px; color:#2B2622;">arrow_back</span>
+        </div>
+        <div>
+          <div style="font-family:'Bricolage Grotesque'; font-size:22px; font-weight:800; color:#2B2622;">Parcheggio</div>
+          <div style="font-size:12.5px; color:#928879;">{{ dateFull }} · <b style="color:#2F8A5C;">{{ parkFree }} posti liberi</b></div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:7px; padding:8px 22px 12px; flex-wrap:wrap;">
+        <sc-for list="{{ parkLegend }}" as="l" hint-placeholder-count="5">
+          <span style="display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; color:#5C544A;">
+            <span style="width:12px; height:12px; border-radius:4px; background:{{ l.bg }}; border:1.5px solid {{ l.bd }};"></span>{{ l.label }}
+          </span>
+        </sc-for>
+      </div>
+
+      <div style="margin:0 18px; background:#F1F6F0; border:1px solid #E3E8DF; border-radius:22px; padding:14px;">
+        <div style="position:relative; width:100%; aspect-ratio:340 / 440;">
+          <!-- decor -->
+          <div style="position:absolute; left:0; top:0; width:13%; height:100%; background:#E3EEDD; border-radius:14px 0 0 14px;"></div>
+          <div style="position:absolute; left:3%; top:42%; transform:rotate(-90deg); transform-origin:left; font-size:9px; font-weight:800; letter-spacing:.12em; color:#9CB48E;">VERDE</div>
+          <div style="position:absolute; left:66%; top:14%; width:31%; height:56%; background:#EAE1D2; border:1.5px solid #DACDB8; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+            <span style="font-size:11px; font-weight:800; color:#A8987E; transform:rotate(-90deg); letter-spacing:.1em;">EDIFICIO</span>
+          </div>
+          <div style="position:absolute; left:30%; top:0; background:#2B2622; color:#fff; font-size:9px; font-weight:700; padding:3px 9px; border-radius:0 0 9px 9px;">Ingresso principale</div>
+          <div style="position:absolute; left:88%; top:2%; width:22px; height:22px; border-radius:50%; border:1.5px solid #C9BDAB; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:800; color:#A8987E;">N</div>
+          <!-- spots -->
+          <sc-for list="{{ spotsView }}" as="s" hint-placeholder-count="30">
+            <div onClick="{{ s.onClick }}" style="position:absolute; left:{{ s.leftPct }}; top:{{ s.topPct }}; width:{{ s.wPct }}; height:{{ s.hPct }}; background:{{ s.bg }}; border:1.5px solid {{ s.bd }}; border-radius:5px; display:flex; align-items:center; justify-content:center; cursor:{{ s.cursor }}; box-shadow:{{ s.shadow }};">
+              <sc-if value="{{ s.showLabel }}" hint-placeholder-val="{{ true }}"><span style="font-size:8px; font-weight:800; color:{{ s.fg }}; line-height:1;">{{ s.label }}</span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="margin:14px 22px 0; display:flex; align-items:center; gap:10px; background:#E9F0FB; border-radius:14px; padding:12px 14px;">
+        <span style="font-family:'Material Symbols Rounded'; font-size:20px; color:#3E6BB0;">{{ parkHintIcon }}</span>
+        <span style="font-size:13px; color:#3F5577; line-height:1.35;">{{ parkHint }}</span>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ---------- POSTAZIONI ---------- -->
+    <sc-if value="{{ isDesk }}" hint-placeholder-val="{{ true }}">
+    <div style="padding-bottom:26px;">
+      <div style="padding:8px 22px 6px; display:flex; align-items:center; gap:12px;">
+        <div onClick="{{ goToday }}" style="width:38px; height:38px; border-radius:12px; background:#fff; border:1px solid #ECE3D6; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none;">
+          <span style="font-family:'Material Symbols Rounded'; font-size:22px; color:#2B2622;">arrow_back</span>
+        </div>
+        <div>
+          <div style="font-family:'Bricolage Grotesque'; font-size:22px; font-weight:800; color:#2B2622;">Postazioni</div>
+          <div style="font-size:12.5px; color:#928879;">{{ dateFull }} · <b style="color:#2F8A5C;">{{ deskFree }} desk liberi</b></div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; padding:8px 22px 10px;">
+        <sc-for list="{{ floorTabs }}" as="t" hint-placeholder-count="2">
+          <div onClick="{{ t.onClick }}" style="flex:1; text-align:center; padding:10px; border-radius:13px; background:{{ t.bg }}; border:1.5px solid {{ t.bd }}; color:{{ t.fg }}; font-size:13.5px; font-weight:700; cursor:pointer;">{{ t.label }}</div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex; gap:7px; padding:0 22px 12px; overflow-x:auto;">
+        <sc-for list="{{ deskFiltersView }}" as="f" hint-placeholder-count="3">
+          <div onClick="{{ f.onClick }}" style="flex:none; display:flex; align-items:center; gap:6px; padding:7px 12px; border-radius:11px; background:{{ f.bg }}; border:1.5px solid {{ f.bd }}; color:{{ f.fg }}; font-size:12.5px; font-weight:700; cursor:pointer;">
+            <span style="font-family:'Material Symbols Rounded'; font-size:17px;">{{ f.icon }}</span>{{ f.label }}
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="margin:0 18px; background:#F7F4EE; border:1px solid #ECE3D6; border-radius:22px; padding:14px;">
+        <div style="position:relative; width:100%; aspect-ratio:340 / 460;">
+          <!-- decor rooms -->
+          <div style="position:absolute; left:3%; top:1.5%; width:94%; height:9%; display:flex; gap:4px;">
+            <div style="flex:2; background:#EFE9DF; border:1px solid #E1D8C8; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#A8987E;">Uffici</div>
+            <div style="flex:1; background:#EFE9DF; border:1px solid #E1D8C8; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#A8987E;">Sala A</div>
+            <div style="flex:1; background:#EFE9DF; border:1px solid #E1D8C8; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#A8987E;">Sala B</div>
+          </div>
+          <div style="position:absolute; left:58%; top:88%; width:39%; height:10%; background:#EFE9DF; border:1px solid #E1D8C8; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#A8987E;">Cucina &amp; lounge</div>
+          <!-- bench rects -->
+          <sc-for list="{{ deskRects }}" as="r" hint-placeholder-count="6">
+            <div style="position:absolute; left:{{ r.leftPct }}; top:{{ r.topPct }}; width:{{ r.wPct }}; height:{{ r.hPct }}; background:{{ r.bg }}; border-radius:8px;"></div>
+          </sc-for>
+          <!-- zone labels -->
+          <sc-for list="{{ zoneLabels }}" as="z" hint-placeholder-count="4">
+            <div style="position:absolute; left:{{ z.leftPct }}; top:{{ z.topPct }}; font-size:9px; font-weight:800; letter-spacing:.04em; color:{{ z.color }};">{{ z.label }}</div>
+          </sc-for>
+          <!-- desks -->
+          <sc-for list="{{ desksView }}" as="d" hint-placeholder-count="20">
+            <div onClick="{{ d.onClick }}" style="position:absolute; left:{{ d.leftPct }}; top:{{ d.topPct }}; width:{{ d.wPct }}; height:{{ d.hPct }}; background:{{ d.bg }}; border:1.5px solid {{ d.bd }}; border-radius:4px; display:flex; align-items:center; justify-content:center; cursor:{{ d.cursor }}; box-shadow:{{ d.shadow }}; opacity:{{ d.opacity }};">
+              <span style="font-size:7px; font-weight:800; color:{{ d.fg }}; line-height:1;">{{ d.text }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="margin:14px 22px 0; display:flex; align-items:center; gap:10px; background:#E7F3EC; border-radius:14px; padding:12px 14px;">
+        <span style="font-family:'Material Symbols Rounded'; font-size:20px; color:#2F8A5C;">groups</span>
+        <span style="font-size:13px; color:#3A6B50; line-height:1.35;">3 colleghi del tuo team siedono in <b>Zona Product</b> oggi.</span>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ---------- TEAM / OFFICE DAY ---------- -->
+    <sc-if value="{{ isTeam }}" hint-placeholder-val="{{ true }}">
+    <div style="padding-bottom:26px;">
+      <div style="padding:8px 22px 6px; display:flex; align-items:center; gap:12px;">
+        <div onClick="{{ goToday }}" style="width:38px; height:38px; border-radius:12px; background:#fff; border:1px solid #ECE3D6; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none;">
+          <span style="font-family:'Material Symbols Rounded'; font-size:22px; color:#2B2622;">arrow_back</span>
+        </div>
+        <div style="font-family:'Bricolage Grotesque'; font-size:22px; font-weight:800; color:#2B2622;">Prenota per il team</div>
+      </div>
+
+      <div style="margin:10px 22px 0; background:#2B2622; border-radius:20px; padding:18px; color:#fff;">
+        <div style="font-size:12px; font-weight:700; color:#C9BDAB; letter-spacing:.04em;">OFFICE DAY SUGGERITO</div>
+        <div style="font-family:'Bricolage Grotesque'; font-size:24px; font-weight:800; margin:4px 0 3px;">Martedì 1 luglio</div>
+        <div style="font-size:13px; color:#C9BDAB;">80% del team disponibile · Zona Product libera</div>
+      </div>
+
+      <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:#A89E92; padding:20px 22px 8px;">MEMBRI DEL TEAM</div>
+      <div style="margin:0 22px;">
+        <sc-for list="{{ teamList }}" as="m" hint-placeholder-count="5">
+          <div onClick="{{ m.onClick }}" style="display:flex; align-items:center; gap:12px; background:#fff; border:1.5px solid {{ m.border }}; border-radius:15px; padding:12px 14px; margin-bottom:9px; cursor:pointer;">
+            <div style="width:40px; height:40px; border-radius:50%; background:{{ m.color }}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; flex:none;">{{ m.initials }}</div>
+            <div style="flex:1;">
+              <div style="font-size:14.5px; font-weight:700; color:#2B2622;">{{ m.name }}</div>
+              <div style="font-size:12.5px; color:#928879;">{{ m.role }} · {{ m.avail }}</div>
+            </div>
+            <span style="font-family:'Material Symbols Rounded'; font-size:24px; color:{{ m.checkColor }}; font-variation-settings:'FILL' {{ m.checkFill }};">{{ m.checkIcon }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="margin:10px 22px 0; background:#FFF7F2; border:1px solid #F6DFD3; border-radius:18px; padding:16px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+          <span style="font-family:'Material Symbols Rounded'; font-size:20px; color:#EC6A4D;">auto_awesome</span>
+          <span style="font-size:14px; font-weight:700; color:#2B2622;">Spotly propone un blocco vicino</span>
+        </div>
+        <div style="font-size:13px; color:#726A60; line-height:1.45;">{{ teamSelCount }} desk affiancati in <b style="color:#2B2622;">Zona Product</b> + posti auto abbinati. Inviti calendario inclusi.</div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ---------- PRANZO ---------- -->
+    <sc-if value="{{ isLunch }}" hint-placeholder-val="{{ true }}">
+    <div style="padding-bottom:26px;">
+      <div style="padding:8px 22px 6px; display:flex; align-items:center; gap:12px;">
+        <div onClick="{{ goToday }}" style="width:38px; height:38px; border-radius:12px; background:#fff; border:1px solid #ECE3D6; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none;">
+          <span style="font-family:'Material Symbols Rounded'; font-size:22px; color:#2B2622;">arrow_back</span>
+        </div>
+        <div>
+          <div style="font-family:'Bricolage Grotesque'; font-size:22px; font-weight:800; color:#2B2622;">Pranzo</div>
+          <div style="font-size:12.5px; color:#928879;">{{ dateFull }} · slot 13:00</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; padding:8px 22px 12px;">
+        <sc-for list="{{ lunchTabs }}" as="t" hint-placeholder-count="2">
+          <div onClick="{{ t.onClick }}" style="flex:1; text-align:center; padding:10px; border-radius:13px; background:{{ t.bg }}; border:1.5px solid {{ t.bd }}; color:{{ t.fg }}; font-size:13.5px; font-weight:700; cursor:pointer;">{{ t.label }}</div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ lunchIsLocali }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:0 22px;">
+        <sc-for list="{{ localiView }}" as="l" hint-placeholder-count="4">
+          <div onClick="{{ l.onClick }}" style="background:#fff; border:1px solid #ECE3D6; border-radius:18px; padding:15px; margin-bottom:11px; cursor:{{ l.cursor }}; opacity:{{ l.opacity }};">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+              <div style="min-width:0;">
+                <div style="font-size:15.5px; font-weight:700; color:#2B2622;">{{ l.name }}</div>
+                <div style="font-size:12.5px; color:#928879; margin-top:2px;">{{ l.cuisine }} · {{ l.dist }}</div>
+              </div>
+              <span style="font-size:11px; font-weight:800; padding:5px 10px; border-radius:9px; background:{{ l.tagBg }}; color:{{ l.tagFg }}; white-space:nowrap;">{{ l.tag }}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:13px;">
+              <div style="flex:1; height:7px; border-radius:5px; background:#EFE9DF; overflow:hidden;">
+                <div style="height:100%; width:{{ l.barW }}; background:{{ l.barColor }}; border-radius:5px;"></div>
+              </div>
+              <span style="font-size:12px; font-weight:700; color:{{ l.barFg }}; white-space:nowrap;">{{ l.capLabel }}</span>
+            </div>
+            <sc-if value="{{ l.welfare }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; align-items:center; gap:6px; margin-top:11px; font-size:12px; color:#2F8A5C; font-weight:600;">
+                <span style="font-family:'Material Symbols Rounded'; font-size:17px;">redeem</span>Buono pasto accettato
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ lunchIsBox }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:0 22px;">
+        <div style="display:flex; align-items:center; gap:10px; background:#FCEDE7; border-radius:14px; padding:12px 14px; margin-bottom:13px;">
+          <span style="font-family:'Material Symbols Rounded'; font-size:20px; color:#EC6A4D;">lunch_dining</span>
+          <span style="font-size:13px; color:#9A4B36; line-height:1.35;">Locali al completo? Il <b>Lunch Box</b> arriva direttamente in ufficio.</span>
+        </div>
+        <sc-for list="{{ boxesView }}" as="b" hint-placeholder-count="3">
+          <div onClick="{{ b.onClick }}" style="background:#fff; border:1px solid #ECE3D6; border-radius:18px; padding:15px; margin-bottom:11px; cursor:pointer; display:flex; gap:13px; align-items:center;">
+            <div style="width:50px; height:50px; border-radius:14px; background:#FCEDE7; color:#EC6A4D; display:flex; align-items:center; justify-content:center; flex:none;">
+              <span style="font-family:'Material Symbols Rounded'; font-size:27px; font-variation-settings:'FILL' 1;">{{ b.icon }}</span>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="font-size:15px; font-weight:700; color:#2B2622;">{{ b.name }}</div>
+                <span style="font-size:10px; font-weight:800; padding:3px 7px; border-radius:7px; background:#E7F3EC; color:#2F8A5C;">{{ b.tag }}</span>
+              </div>
+              <div style="font-size:12.5px; color:#726A60; margin-top:2px;">{{ b.desc }}</div>
+              <div style="font-size:11.5px; color:#A89E92; margin-top:3px;">Allergeni: {{ b.allerg }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <!-- ---------- PROFILO ---------- -->
+    <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ true }}">
+    <div style="padding-bottom:26px;">
+      <div style="padding:8px 22px 6px; display:flex; align-items:center; gap:12px;">
+        <div onClick="{{ goToday }}" style="width:38px; height:38px; border-radius:12px; background:#fff; border:1px solid #ECE3D6; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none;">
+          <span style="font-family:'Material Symbols Rounded'; font-size:22px; color:#2B2622;">arrow_back</span>
+        </div>
+        <div style="font-family:'Bricolage Grotesque'; font-size:22px; font-weight:800; color:#2B2622;">Profilo</div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; padding:14px 22px 4px;">
+        <div style="width:76px; height:76px; border-radius:50%; background:#EC6A4D; color:#fff; display:flex; align-items:center; justify-content:center; font-size:27px; font-weight:800; box-shadow:0 6px 16px rgba(236,106,77,.35);">GM</div>
+        <div style="font-family:'Bricolage Grotesque'; font-size:21px; font-weight:800; color:#2B2622; margin-top:11px;">Giulia Moretti</div>
+        <div style="font-size:13px; color:#928879;">Project Manager · Team Product</div>
+      </div>
+      <div style="margin:16px 22px 0; background:#fff; border:1px solid #ECE3D6; border-radius:18px; padding:4px 16px;">
+        <sc-for list="{{ profileRows }}" as="p" hint-placeholder-count="4">
+          <div style="display:flex; align-items:center; gap:13px; padding:13px 0; border-bottom:1px solid {{ p.line }};">
+            <span style="font-family:'Material Symbols Rounded'; font-size:21px; color:#928879;">{{ p.icon }}</span>
+            <span style="flex:1; font-size:14px; color:#2B2622; font-weight:600;">{{ p.label }}</span>
+            <span style="font-size:13px; color:#928879; font-weight:600;">{{ p.value }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font-size:12px; font-weight:800; letter-spacing:.06em; color:#A89E92; padding:20px 22px 8px;">PREFERENZE POSTAZIONE</div>
+      <div style="margin:0 22px; display:flex; flex-wrap:wrap; gap:8px;">
+        <sc-for list="{{ prefChips }}" as="c" hint-placeholder-count="4">
+          <span style="display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:#9A4B36; background:#FCEDE7; padding:8px 12px; border-radius:11px;">
+            <span style="font-family:'Material Symbols Rounded'; font-size:17px;">{{ c.icon }}</span>{{ c.label }}
+          </span>
+        </sc-for>
+      </div>
+      <div onClick="{{ logout }}" style="margin:24px 22px 0; text-align:center; font-size:14px; font-weight:700; color:#C0563C; cursor:pointer; padding:12px;">Esci</div>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div style="flex:none; display:flex; background:#fff; border-top:1px solid #ECE3D6; padding:9px 8px calc(9px + env(safe-area-inset-bottom));">
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+      <div onClick="{{ n.onClick }}" style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; padding:4px 0;">
+        <span style="font-family:'Material Symbols Rounded'; font-size:25px; color:{{ n.color }}; font-variation-settings:'FILL' {{ n.fill }};">{{ n.icon }}</span>
+        <span style="font-size:10px; font-weight:700; color:{{ n.color }};">{{ n.label }}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- BOTTOM SHEET -->
+  <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ true }}">
+  <div style="position:absolute; inset:0; z-index:30;">
+    <div onClick="{{ sheet.onClose }}" style="position:absolute; inset:0; background:rgba(43,38,34,.42); animation:spScrim .2s ease;"></div>
+    <div style="position:absolute; left:0; right:0; bottom:0; background:#FBF6EF; border-radius:26px 26px 0 0; padding:10px 22px calc(24px + env(safe-area-inset-bottom)); animation:spSheet .26s cubic-bezier(.22,1,.36,1);">
+      <div style="width:38px; height:5px; border-radius:3px; background:#E0D6C6; margin:0 auto 16px;"></div>
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
+        <div style="width:52px; height:52px; border-radius:15px; background:{{ sheet.tint }}; color:{{ sheet.accent }}; display:flex; align-items:center; justify-content:center; flex:none;">
+          <span style="font-family:'Material Symbols Rounded'; font-size:28px; font-variation-settings:'FILL' 1;">{{ sheet.icon }}</span>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-family:'Bricolage Grotesque'; font-size:21px; font-weight:800; color:#2B2622;">{{ sheet.title }}</div>
+          <div style="font-size:13px; color:#928879;">{{ sheet.subtitle }}</div>
+        </div>
+      </div>
+      <div style="background:#fff; border:1px solid #ECE3D6; border-radius:16px; padding:4px 15px; margin-bottom:14px;">
+        <sc-for list="{{ sheet.lines }}" as="ln" hint-placeholder-count="3">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid {{ ln.line }};">
+            <span style="font-size:13px; color:#928879; font-weight:600;">{{ ln.k }}</span>
+            <span style="font-size:13.5px; color:#2B2622; font-weight:700;">{{ ln.v }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ sheet.pair }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; align-items:center; gap:9px; background:#E9F0FB; border-radius:13px; padding:12px 14px; margin-bottom:14px;">
+          <span style="font-family:'Material Symbols Rounded'; font-size:19px; color:#3E6BB0;">auto_awesome</span>
+          <span style="font-size:12.5px; color:#3F5577; line-height:1.35;">{{ sheet.pair }}</span>
+        </div>
+      </sc-if>
+      <button onClick="{{ sheet.onConfirm }}" style="width:100%; border:none; cursor:pointer; background:{{ sheet.ctaBg }}; color:{{ sheet.ctaFg }}; border-radius:15px; padding:16px; font-family:'Plus Jakarta Sans'; font-size:15.5px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:9px;">
+        <span style="font-family:'Material Symbols Rounded'; font-size:21px;">{{ sheet.ctaIcon }}</span>{{ sheet.cta }}
+      </button>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- TOAST -->
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute; left:50%; bottom:96px; z-index:40; background:#2B2622; color:#fff; padding:13px 18px; border-radius:14px; font-size:13.5px; font-weight:700; display:flex; align-items:center; gap:9px; box-shadow:0 10px 30px rgba(43,38,34,.35); animation:spToast 2.6s ease forwards; white-space:nowrap; max-width:86%;">
+      <span style="font-family:'Material Symbols Rounded'; font-size:20px; color:#7FD3A3;">check_circle</span>{{ toast }}
+    </div>
+  </sc-if>
+
+  </sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.days = [
+      {dow:'OGGI', d:'24', full:'Oggi, 24 giugno'},
+      {dow:'MER', d:'25', full:'Mercoledì 25 giugno'},
+      {dow:'GIO', d:'26', full:'Giovedì 26 giugno'},
+      {dow:'VEN', d:'27', full:'Venerdì 27 giugno'},
+      {dow:'LUN', d:'30', full:'Lunedì 30 giugno'},
+      {dow:'MAR', d:'01', full:'Martedì 1 luglio'},
+      {dow:'MER', d:'02', full:'Mercoledì 2 luglio'},
+    ];
+    this.team = [
+      {id:'u1', name:'Marco Rossi', initials:'MR', color:'#EC6A4D', here:true, role:'Designer'},
+      {id:'u2', name:'Sara Lombardi', initials:'SL', color:'#2F8A5C', here:true, role:'PM'},
+      {id:'u3', name:'Anna Ferri', initials:'AF', color:'#C9892F', here:true, role:'Developer'},
+      {id:'u4', name:'Luca Bianchi', initials:'LB', color:'#4F7AC0', here:false, role:'Developer'},
+      {id:'u5', name:'Davide Pini', initials:'DP', color:'#8A6FB0', here:false, role:'Marketing'},
+    ];
+    this.locali = [
+      {id:'l1', name:'Bistrot Verde', cuisine:'Mediterranea', dist:'80 m', left:6, cap:30, welfare:true},
+      {id:'l2', name:'Trattoria da Nino', cuisine:'Cucina italiana', dist:'150 m', left:2, cap:24, welfare:true},
+      {id:'l3', name:'Poke House', cuisine:'Healthy · poke', dist:'200 m', left:0, cap:20, welfare:false},
+      {id:'l4', name:'Sushi Kai', cuisine:'Giapponese', dist:'240 m', left:9, cap:28, welfare:true},
+    ];
+    this.boxes = [
+      {id:'b1', name:'Box Mediterraneo', desc:'Farro, verdure grigliate, hummus', tag:'Veg', allerg:'Glutine, Sesamo', icon:'eco'},
+      {id:'b2', name:'Box Pollo & Quinoa', desc:'Pollo, quinoa, avocado, lime', tag:'Proteico', allerg:'Nessuno', icon:'lunch_dining'},
+      {id:'b3', name:'Box Caesar', desc:'Pollo, grana, crostini, uovo', tag:'Classico', allerg:'Glutine, Latte, Uova', icon:'ramen_dining'},
+    ];
+    this.parkBase = this.buildParking();
+    this.deskPrimo = this.buildDesks('primo');
+    this.deskTerra = this.buildDesks('terra');
+    // assign teammates + seed user's desk in Zona Product (primo)
+    const prod = this.deskPrimo.desks.filter(d=>d.zone==='product');
+    ['MR','SL','AF'].forEach((ini,i)=>{ if(prod[i+2]){ prod[i+2].free=false; prod[i+2].occ=ini; } });
+    const seat = prod[0];
+    seat.free = true;
+
+    this.state = {
+      screen:'login', dateIdx:0, floor:'primo',
+      pendingSpot:null, pendingDesk:null, pendingLunch:null, pendingBox:null,
+      sheet:null, lunchTab:'locali',
+      deskFilters:{monitor:false, standing:false, team:false},
+      teamSel:{u1:true, u2:true, u3:true, u4:false, u5:false},
+      toast:null,
+      bookings:{
+        0:{ parcheggio:null,
+            postazione:{id:seat.id, label:seat.label, zone:'Zona Product', floor:'Piano 1', attrs:['Monitor 27"','Vicino al team']},
+            pranzo:null }
+      },
+    };
+  }
+
+  // ---------- layout builders ----------
+  buildParking(){
+    const W=340, H=440;
+    const rows=[
+      {type:'reserved', x:14,y:74,w:30,h:24, n:5, dy:30, dir:'v'},
+      {type:'guest', x:148,y:10,w:32,h:20, n:3, dx:40, dir:'h'},
+      {type:'standard', x:64,y:112,w:24,h:32, n:5, dx:30, dir:'h'},
+      {type:'standard', x:64,y:172,w:24,h:32, n:5, dx:30, dir:'h'},
+      {type:'standard', x:64,y:248,w:24,h:32, n:5, dx:30, dir:'h'},
+      {type:'standard', x:64,y:308,w:24,h:32, n:5, dx:30, dir:'h'},
+      {type:'standard', x:124,y:382,w:24,h:32, n:3, dx:30, dir:'h'},
+      {type:'disabled', x:218,y:382,w:26,h:32, n:2, dx:32, dir:'h'},
+      {type:'ev', x:236,y:330,w:28,h:24, n:2, dx:34, dir:'h'},
+      {type:'moto', x:16,y:248,w:22,h:14, n:4, dy:22, dir:'v'},
+    ];
+    const spots=[]; let n=0; let num=0;
+    rows.forEach((r,ri)=>{
+      for(let k=0;k<r.n;k++){
+        n++;
+        const x = r.dir==='h' ? r.x + k*r.dx : r.x;
+        const y = r.dir==='v' ? r.y + k*r.dy : r.y;
+        let free=false;
+        if(r.type==='standard') free = ((ri+k)%3===0);
+        else if(r.type==='guest') free = (k===2);
+        else if(r.type==='ev') free = (k===0);
+        else if(r.type==='disabled') free = (k===0);
+        else if(r.type==='moto') free = (k%2===0);
+        let label='';
+        if(r.type==='standard'){ num++; label='P'+num; }
+        else if(r.type==='ev') label='EV';
+        else if(r.type==='disabled') label='H';
+        else if(r.type==='reserved') label='R';
+        else if(r.type==='moto') label='M';
+        else if(r.type==='guest') label='G';
+        spots.push({ id:'sp'+n, type:r.type, free, label,
+          leftPct:(x/W*100).toFixed(2)+'%', topPct:(y/H*100).toFixed(2)+'%',
+          wPct:(r.w/W*100).toFixed(2)+'%', hPct:(r.h/H*100).toFixed(2)+'%' });
+      }
+    });
+    return spots;
+  }
+
+  buildDesks(floor){
+    const W=340, H=460, dw=22, dh=16;
+    const benches = floor==='primo' ? [
+      {zone:'product', x:26,y:118,cols:4,dx:32,rows:2,dy:40},
+      {zone:'product', x:26,y:222,cols:4,dx:32,rows:2,dy:40},
+      {zone:'marketing', x:190,y:118,cols:4,dx:32,rows:2,dy:40},
+      {zone:'marketing', x:190,y:222,cols:4,dx:32,rows:2,dy:40},
+      {zone:'sales', x:26,y:344,cols:5,dx:32,rows:1,dy:0},
+      {zone:'focus', x:208,y:344,cols:3,dx:36,rows:1,dy:0},
+    ] : [
+      {zone:'product', x:40,y:96,cols:3,dx:42,rows:2,dy:46},
+      {zone:'marketing', x:40,y:236,cols:3,dx:42,rows:1,dy:0},
+      {zone:'sales', x:40,y:336,cols:2,dx:42,rows:1,dy:0},
+    ];
+    const desks=[]; let n=0;
+    const pool=['GR','TM','EL','FB','MC','AR','SP','VN','LF','DA','RB','NC','PG','VT'];
+    benches.forEach((b,bi)=>{
+      for(let r=0;r<b.rows;r++){
+        for(let c=0;c<b.cols;c++){
+          n++;
+          const x=b.x+c*b.dx, y=b.y+r*b.dy;
+          const free = ((bi*3 + r*2 + c) % 3 === 0);
+          desks.push({
+            id:'dk-'+floor+'-'+n,
+            label:(floor==='primo'?'D1-':'D0-')+(n<10?'0'+n:''+n),
+            zone:b.zone, free, occ: free?null:pool[(n*5)%pool.length],
+            monitor:(n%2===0), standing:(n%5===0),
+            leftPct:(x/W*100).toFixed(2)+'%', topPct:(y/H*100).toFixed(2)+'%',
+            wPct:(dw/W*100).toFixed(2)+'%', hPct:(dh/H*100).toFixed(2)+'%',
+          });
+        }
+      }
+    });
+    const rectTint={product:'#EAF4EE', marketing:'#FBEFE9', sales:'#EEF2FA', focus:'#F3EEF8'};
+    const rects = benches.map(b=>{
+      const wpx=(b.cols-1)*b.dx + dw + 10;
+      const hpx=(b.rows===2 ? b.dy+dh : dh) + 10;
+      return { bg:rectTint[b.zone],
+        leftPct:((b.x-5)/W*100).toFixed(2)+'%', topPct:((b.y-5)/H*100).toFixed(2)+'%',
+        wPct:(wpx/W*100).toFixed(2)+'%', hPct:(hpx/H*100).toFixed(2)+'%' };
+    });
+    const labels = floor==='primo' ? [
+      {label:'PRODUCT', color:'#2F8A5C', leftPct:'7%', topPct:'21.5%'},
+      {label:'MARKETING', color:'#D2553A', leftPct:'55%', topPct:'21.5%'},
+      {label:'SALES', color:'#4F7AC0', leftPct:'7%', topPct:'69%'},
+      {label:'FOCUS', color:'#8A6FB0', leftPct:'61%', topPct:'69%'},
+    ] : [
+      {label:'PRODUCT', color:'#2F8A5C', leftPct:'11%', topPct:'17%'},
+      {label:'MARKETING', color:'#D2553A', leftPct:'11%', topPct:'47%'},
+      {label:'SALES', color:'#4F7AC0', leftPct:'11%', topPct:'69%'},
+    ];
+    return {desks, rects, labels};
+  }
+
+  // ---------- helpers ----------
+  curBooking(){ return this.state.bookings[this.state.dateIdx] || {}; }
+  allDesks(){ return (this.state.floor==='primo'?this.deskPrimo:this.deskTerra); }
+  zoneName(z){ return {product:'Zona Product', marketing:'Zona Marketing', sales:'Zona Sales', focus:'Area Focus'}[z]; }
+
+  updateBooking(key,val){
+    this.setState(st=>{
+      const bk={...st.bookings};
+      const cur={...(bk[st.dateIdx]||{})};
+      cur[key]=val; bk[st.dateIdx]=cur;
+      return {bookings:bk};
+    });
+  }
+  fireToast(msg){
+    this.setState({toast:msg});
+    clearTimeout(this._t);
+    this._t=setTimeout(()=>this.setState({toast:null}), 2500);
+  }
+
+  // ---------- actions ----------
+  go(s){ this.setState({screen:s, sheet:null}); }
+  login(){ this.go('today'); }
+  logout(){ this.go('login'); }
+  selectDate(i){ this.setState({dateIdx:i}); }
+  selectFloor(f){ this.setState({floor:f, sheet:null}); }
+  toggleFilter(k){ this.setState(st=>({deskFilters:{...st.deskFilters,[k]:!st.deskFilters[k]}})); }
+  toggleMember(id){ this.setState(st=>({teamSel:{...st.teamSel,[id]:!st.teamSel[id]}})); }
+  closeSheet(){ this.setState({sheet:null}); }
+
+  tapSpot(id){ this.setState({sheet:'spot', pendingSpot:id}); }
+  confirmSpot(){
+    const sp=this.parkBase.find(x=>x.id===this.state.pendingSpot);
+    const typeLabel={standard:'Posto standard',ev:'Ricarica EV',disabled:'Posto accessibile',guest:'Posto ospiti',moto:'Posto moto'}[sp.type];
+    const lab = sp.type==='standard' ? 'P-'+sp.label.slice(1) : (sp.type==='ev'?'EV-1':sp.type==='disabled'?'H-1':sp.label);
+    this.updateBooking('parcheggio', {id:sp.id, label:lab, typeLabel, level:'Esterno · Livello 0'});
+    this.setState({sheet:null});
+    this.fireToast('Parcheggio confermato · '+lab);
+  }
+  tapDesk(id){ this.setState({sheet:'desk', pendingDesk:id}); }
+  confirmDesk(){
+    const dk=this.allDesks().desks.find(d=>d.id===this.state.pendingDesk);
+    const attrs=[dk.monitor?'Monitor 27"':null, dk.standing?'Standing desk':null].filter(Boolean);
+    this.updateBooking('postazione', {id:dk.id, label:dk.label, zone:this.zoneName(dk.zone), floor:this.state.floor==='primo'?'Piano 1':'Piano 0', attrs});
+    this.setState({sheet:null});
+    this.fireToast('Postazione confermata · '+dk.label);
+  }
+  tapLocale(id){
+    const lo=this.locali.find(l=>l.id===id);
+    if(lo.left===0){ this.setState({lunchTab:'box'}); this.fireToast(lo.name+' al completo — prova un Lunch Box'); return; }
+    this.setState({sheet:'lunch', pendingLunch:id});
+  }
+  confirmLunch(){
+    const lo=this.locali.find(l=>l.id===this.state.pendingLunch);
+    this.updateBooking('pranzo', {kind:'locale', name:lo.name, detail:'Tavolo · 13:00'});
+    this.setState({sheet:null});
+    this.fireToast('Pranzo prenotato · '+lo.name);
+  }
+  tapBox(id){ this.setState({sheet:'box', pendingBox:id}); }
+  confirmBox(){
+    const bx=this.boxes.find(x=>x.id===this.state.pendingBox);
+    this.updateBooking('pranzo', {kind:'box', name:bx.name, detail:'Consegna 13:00 in ufficio'});
+    this.setState({sheet:null});
+    this.fireToast('Lunch box ordinato · '+bx.name);
+  }
+  cancelBooking(key){
+    this.updateBooking(key,null);
+    this.setState({sheet:null});
+    this.fireToast('Prenotazione annullata');
+  }
+  bookTeam(){
+    const di=5;
+    const free=this.deskPrimo.desks.filter(d=>d.zone==='product'&&d.free)[0];
+    this.setState(st=>{
+      const bk={...st.bookings};
+      bk[di]={...(bk[di]||{}),
+        postazione:{id:free.id, label:free.label, zone:'Zona Product', floor:'Piano 1', attrs:['Vicino al team']},
+        parcheggio:{id:'spX', label:'P-14', typeLabel:'Posto standard', level:'Esterno · Livello 0'} };
+      return {bookings:bk, dateIdx:di, screen:'today'};
+    });
+    this.fireToast('Office day prenotato · 4 colleghi');
+  }
+
+  // ---------- styles ----------
+  spotStyle(status){
+    switch(status){
+      case 'mine': return {bg:'#EC6A4D',bd:'#D2553A',fg:'#fff',shadow:'0 2px 6px rgba(236,106,77,.45)',showLabel:true,label:'TU'};
+      case 'selected': return {bg:'#FCEDE7',bd:'#EC6A4D',fg:'#D2553A',shadow:'0 0 0 3px rgba(236,106,77,.28)',showLabel:true,label:null};
+      case 'free': return {bg:'#E7F3EC',bd:'#7FC2A0',fg:'#2F8A5C',shadow:'none',showLabel:true,label:null};
+      case 'ev': return {bg:'#E7F3EC',bd:'#7FC2A0',fg:'#2F8A5C',shadow:'none',showLabel:true,label:'EV'};
+      case 'disabled': return {bg:'#E9F0FB',bd:'#9DBCE8',fg:'#3E6BB0',shadow:'none',showLabel:true,label:'H'};
+      case 'reserved': return {bg:'#FBEFD7',bd:'#E6C783',fg:'#B07D22',shadow:'none',showLabel:true,label:'R'};
+      default: return {bg:'#ECE4D9',bd:'#DBD0C0',fg:'#B3A795',shadow:'none',showLabel:false,label:null};
+    }
+  }
+  deskStyle(status,zone){
+    const zc={product:'#2F8A5C',marketing:'#D2553A',sales:'#4F7AC0',focus:'#8A6FB0'}[zone];
+    const zt={product:'#E4F2EA',marketing:'#FBE9E2',sales:'#E9F0FB',focus:'#F0EAF7'}[zone];
+    switch(status){
+      case 'mine': return {bg:'#EC6A4D',bd:'#D2553A',fg:'#fff',shadow:'0 2px 6px rgba(236,106,77,.45)'};
+      case 'selected': return {bg:'#FFFFFF',bd:'#EC6A4D',fg:'#D2553A',shadow:'0 0 0 3px rgba(236,106,77,.28)'};
+      case 'team': return {bg:zc,bd:zc,fg:'#fff',shadow:'0 0 0 2px '+zt};
+      case 'occupied': return {bg:zt,bd:zt,fg:zc,shadow:'none'};
+      default: return {bg:'#FFFFFF',bd:zc,fg:zc,shadow:'none'};
+    }
+  }
+
+  computeSheet(){
+    const s=this.state; if(!s.sheet) return null;
+    const b=this.curBooking();
+    const L=(arr)=>arr.map((x,i)=>({k:x.k,v:x.v,line:i===arr.length-1?'transparent':'#F1EADF'}));
+    if(s.sheet==='spot'){
+      const sp=this.parkBase.find(x=>x.id===s.pendingSpot); if(!sp) return null;
+      const typeLabel={standard:'Posto standard',ev:'Ricarica elettrica',disabled:'Posto accessibile',guest:'Posto ospiti',moto:'Posto moto'}[sp.type];
+      const lab = sp.type==='standard' ? 'P-'+sp.label.slice(1) : (sp.type==='ev'?'EV-1':sp.type==='disabled'?'H-1':sp.label);
+      return { icon:'directions_car', accent:'#3E6BB0', tint:'#E9F0FB',
+        title:lab, subtitle:typeLabel,
+        lines:L([{k:'Data',v:this.days[s.dateIdx].full},{k:'Orario',v:'08:30 – 18:00'},{k:'Zona',v:'Esterno · Livello 0'}]),
+        pair: b.postazione ? ('A 2 min dalla tua postazione '+b.postazione.label+'.') : null,
+        cta:'Conferma posto', ctaIcon:'check', ctaBg:'#2B2622', ctaFg:'#fff', onConfirm:()=>this.confirmSpot(), onClose:()=>this.closeSheet() };
+    }
+    if(s.sheet==='desk'){
+      const dk=this.allDesks().desks.find(d=>d.id===s.pendingDesk); if(!dk) return null;
+      const mine=b.postazione && b.postazione.id===dk.id;
+      const attrs=[dk.monitor?'Monitor 27"':'No monitor', dk.standing?'Standing':'Seduta'].join(' · ');
+      return { icon:'chair', accent:'#2F8A5C', tint:'#E7F3EC',
+        title:dk.label, subtitle:this.zoneName(dk.zone),
+        lines:L([{k:'Data',v:this.days[s.dateIdx].full},{k:'Attributi',v:attrs},{k:'Piano',v:this.state.floor==='primo'?'Piano 1':'Piano 0'}]),
+        pair: mine ? null : (b.parcheggio ? null : 'Spotly può abbinare il posto auto più vicino all’ingresso.'),
+        cta: mine?'Annulla prenotazione':'Conferma postazione', ctaIcon: mine?'close':'check',
+        ctaBg: mine?'#FBEAE4':'#2B2622', ctaFg: mine?'#C0563C':'#fff',
+        onConfirm: mine?()=>this.cancelBooking('postazione'):()=>this.confirmDesk(), onClose:()=>this.closeSheet() };
+    }
+    if(s.sheet==='lunch'){
+      const lo=this.locali.find(l=>l.id===s.pendingLunch); if(!lo) return null;
+      return { icon:'restaurant', accent:'#EC6A4D', tint:'#FCEDE7',
+        title:lo.name, subtitle:lo.cuisine+' · '+lo.dist,
+        lines:L([{k:'Slot',v:'13:00 – 14:00'},{k:'Posti liberi',v:lo.left+' su '+lo.cap},{k:'Pagamento',v:lo.welfare?'Buono pasto':'Diretto'}]),
+        pair:null, cta:'Prenota il tavolo', ctaIcon:'check', ctaBg:'#2B2622', ctaFg:'#fff',
+        onConfirm:()=>this.confirmLunch(), onClose:()=>this.closeSheet() };
+    }
+    if(s.sheet==='box'){
+      const bx=this.boxes.find(x=>x.id===s.pendingBox); if(!bx) return null;
+      return { icon:'lunch_dining', accent:'#EC6A4D', tint:'#FCEDE7',
+        title:bx.name, subtitle:bx.desc,
+        lines:L([{k:'Consegna',v:'13:00 in ufficio'},{k:'Allergeni',v:bx.allerg},{k:'Tipo',v:bx.tag}]),
+        pair:'Consegnato al desk: nessuna coda, nessuna uscita.', cta:'Ordina lunch box', ctaIcon:'check',
+        ctaBg:'#2B2622', ctaFg:'#fff', onConfirm:()=>this.confirmBox(), onClose:()=>this.closeSheet() };
+    }
+    return null;
+  }
+
+  renderVals(){
+    const s=this.state, b=this.curBooking();
+    const day=this.days[s.dateIdx];
+
+    // dashboard cards
+    const parkBooked=!!b.parcheggio, deskBooked=!!b.postazione, lunchBooked=!!b.pranzo;
+    const chip=(ok)=> ok ? {t:'Prenotato',bg:'#E7F3EC',fg:'#2F8A5C'} : {t:'Da fare',bg:'#FBEFD7',fg:'#B07D22'};
+    const cp=chip(parkBooked), cd=chip(deskBooked), cl=chip(lunchBooked);
+    const done=[parkBooked,deskBooked,lunchBooked].filter(Boolean).length;
+
+    // days strip
+    const daysView=this.days.map((d,i)=>{
+      const act=i===s.dateIdx;
+      return {dow:d.dow, d:d.d, onClick:()=>this.selectDate(i),
+        bg:act?'#2B2622':'#fff', bd:act?'#2B2622':'#ECE3D6', fg:act?'#fff':'#2B2622',
+        dowColor:act?'#C9BDAB':'#A89E92'};
+    });
+
+    // parking view
+    const spotsView=this.parkBase.map(sp=>{
+      const mine=b.parcheggio && b.parcheggio.id===sp.id;
+      const sel=s.sheet==='spot' && s.pendingSpot===sp.id;
+      let status;
+      if(mine) status='mine'; else if(sel) status='selected';
+      else if(sp.type==='reserved') status='reserved';
+      else if(sp.free){ status= sp.type==='ev'?'ev':sp.type==='disabled'?'disabled':'free'; }
+      else status='occupied';
+      const st=this.spotStyle(status);
+      const clickable = mine || sp.free;
+      return {...sp, ...st, label: st.label!==null?st.label:(sp.type==='standard'?sp.label.slice(1):sp.label),
+        cursor:clickable?'pointer':'default', onClick: clickable?()=>this.tapSpot(sp.id):undefined};
+    });
+    const parkFree=this.parkBase.filter(x=>x.free && (x.type==='standard'||x.type==='ev'||x.type==='disabled')).length - (b.parcheggio?1:0);
+
+    // desk view
+    const flo=this.allDesks();
+    const f=s.deskFilters; const anyF=f.monitor||f.standing||f.team;
+    const desksView=flo.desks.map(d=>{
+      const mine=b.postazione && b.postazione.id===d.id;
+      const sel=s.sheet==='desk' && s.pendingDesk===d.id;
+      const isTeam=!d.free && ['MR','SL','AF'].includes(d.occ);
+      let status;
+      if(mine) status='mine'; else if(sel) status='selected'; else if(isTeam) status='team';
+      else if(!d.free) status='occupied'; else status='free';
+      const st=this.deskStyle(status,d.zone);
+      let text=''; if(status==='mine')text='TU'; else if(status==='team'||status==='occupied')text=d.occ;
+      let dim=false;
+      if(anyF){ const m=(!f.monitor||d.monitor)&&(!f.standing||d.standing)&&(!f.team||d.zone==='product'); dim=!m && !mine; }
+      const clickable=d.free||mine;
+      return {...d, ...st, text, opacity:dim?0.28:1, cursor:clickable?'pointer':'default', onClick:clickable?()=>this.tapDesk(d.id):undefined};
+    });
+    const deskFree=flo.desks.filter(x=>x.free).length - (b.postazione&&b.postazione.floor===(s.floor==='primo'?'Piano 1':'Piano 0')?1:0);
+
+    const floorTabs=[
+      {key:'terra',label:'Piano terra'},{key:'primo',label:'Piano 1'}
+    ].map(t=>{const a=s.floor===t.key;return{label:t.label,onClick:()=>this.selectFloor(t.key),
+      bg:a?'#2B2622':'#fff',bd:a?'#2B2622':'#ECE3D6',fg:a?'#fff':'#726A60'};});
+
+    const deskFiltersView=[
+      {k:'monitor',label:'Monitor',icon:'desktop_windows'},
+      {k:'standing',label:'Standing',icon:'height'},
+      {k:'team',label:'Vicino al team',icon:'groups'},
+    ].map(x=>{const a=s.deskFilters[x.k];return{label:x.label,icon:x.icon,onClick:()=>this.toggleFilter(x.k),
+      bg:a?'#FCEDE7':'#fff',bd:a?'#EC6A4D':'#ECE3D6',fg:a?'#D2553A':'#726A60'};});
+
+    // lunch
+    const localiView=this.locali.map(l=>{
+      const full=l.left===0;
+      const pct=Math.round((l.cap-l.left)/l.cap*100);
+      const barColor= l.left===0?'#C0563C':l.left<=3?'#E0A23A':'#2F8A5C';
+      return {...l, onClick:()=>this.tapLocale(l.id), cursor:'pointer', opacity:full?0.62:1,
+        tag: full?'Al completo':(l.left<=3?'Ultimi posti':'Disponibile'),
+        tagBg: full?'#FBE7E1':(l.left<=3?'#FBEFD7':'#E7F3EC'), tagFg: full?'#C0563C':(l.left<=3?'#B07D22':'#2F8A5C'),
+        barW:pct+'%', barColor, barFg: full?'#C0563C':'#726A60',
+        capLabel: full?'0 posti':(l.left+' liberi') };
+    });
+    const boxesView=this.boxes.map(x=>({...x, onClick:()=>this.tapBox(x.id)}));
+    const lunchTabs=[{k:'locali',label:'Locali convenzionati'},{k:'box',label:'Lunch box'}].map(t=>{
+      const a=s.lunchTab===t.k;return{label:t.label,onClick:()=>this.setState({lunchTab:t.k}),
+      bg:a?'#2B2622':'#fff',bd:a?'#2B2622':'#ECE3D6',fg:a?'#fff':'#726A60'};});
+
+    // team
+    const teamList=this.team.map(m=>{
+      const on=!!s.teamSel[m.id];
+      return {...m, onClick:()=>this.toggleMember(m.id),
+        avail: m.here?'in ufficio':'da remoto',
+        border:on?'#EC6A4D':'#ECE3D6',
+        checkIcon:on?'check_circle':'radio_button_unchecked', checkColor:on?'#EC6A4D':'#D8CEBF', checkFill:on?1:0};
+    });
+    const teamSelCount=Object.values(s.teamSel).filter(Boolean).length;
+
+    // nav
+    const map={today:'today',park:'park',desk:'desk',team:'desk',lunch:'lunch',profile:'profile'};
+    const nav=[
+      {key:'today',label:'Oggi',icon:'home',act:'today'},
+      {key:'desk',label:'Postazioni',icon:'chair',act:'desk'},
+      {key:'park',label:'Parcheggio',icon:'local_parking',act:'park'},
+      {key:'lunch',label:'Pranzo',icon:'restaurant',act:'lunch'},
+      {key:'profile',label:'Profilo',icon:'person',act:'profile'},
+    ].map(n=>{const a=map[s.screen]===n.act;return{label:n.label,icon:n.icon,onClick:()=>this.go(n.key),
+      color:a?'#EC6A4D':'#A89E92',fill:a?1:0};});
+
+    const sheet=this.computeSheet();
+
+    return {
+      isLogin:s.screen==='login', inApp:s.screen!=='login',
+      isToday:s.screen==='today', isPark:s.screen==='park', isDesk:s.screen==='desk',
+      isTeam:s.screen==='team', isLunch:s.screen==='lunch', isProfile:s.screen==='profile',
+      dateFull:day.full,
+      loginFeatures:[
+        {icon:'directions_car',tint:'#E9F0FB',color:'#3E6BB0',title:'Parcheggio',sub:'Mappa live dei posti auto'},
+        {icon:'chair',tint:'#E7F3EC',color:'#2F8A5C',title:'Postazione',sub:'Siediti vicino al tuo team'},
+        {icon:'restaurant',tint:'#FCEDE7',color:'#EC6A4D',title:'Pranzo',sub:'Locali o lunch box in ufficio'},
+      ],
+      login:()=>this.login(), logout:()=>this.logout(),
+      goProfile:()=>this.go('profile'), goPark:()=>this.go('park'), goDesk:()=>this.go('desk'),
+      goLunch:()=>this.go('lunch'), goTeam:()=>this.go('team'), goToday:()=>this.go('today'),
+      daysView,
+      progressLabel: done+' di 3 prenotate',
+      progressDots:[parkBooked,deskBooked,lunchBooked].map(x=>({bg:x?'#7FD3A3':'#564E45'})),
+      parkLine: parkBooked?('Posto '+b.parcheggio.label+' · '+b.parcheggio.level):'Nessun posto · tocca per scegliere',
+      deskLine: deskBooked?(b.postazione.label+' · '+b.postazione.zone+' · '+b.postazione.floor):'Nessuna postazione · tocca per prenotare',
+      lunchLine: lunchBooked?(b.pranzo.name+' · '+b.pranzo.detail):'Nessun pranzo · locale o lunch box',
+      parkChip:cp.t, parkChipBg:cp.bg, parkChipFg:cp.fg,
+      deskChip:cd.t, deskChipBg:cd.bg, deskChipFg:cd.fg,
+      lunchChip:cl.t, lunchChipBg:cl.bg, lunchChipFg:cl.fg,
+      teamAvatars:this.team.map(m=>({initials:m.initials,color:m.color,opacity:m.here?1:0.4})),
+      spotsView, parkFree:Math.max(parkFree,0),
+      parkLegend:[
+        {label:'Libero',bg:'#E7F3EC',bd:'#7FC2A0'},{label:'Occupato',bg:'#ECE4D9',bd:'#DBD0C0'},
+        {label:'Riservato',bg:'#FBEFD7',bd:'#E6C783'},{label:'EV',bg:'#E7F3EC',bd:'#7FC2A0'},
+        {label:'Accessibile',bg:'#E9F0FB',bd:'#9DBCE8'},
+      ],
+      parkHint: b.postazione ? ('Spotly suggerisce un posto vicino alla tua postazione '+b.postazione.label+'.') : 'Tocca un posto verde per prenotarlo. Abbinamento auto↔scrivania automatico.',
+      parkHintIcon: b.postazione?'auto_awesome':'touch_app',
+      desksView, deskRects:flo.rects, zoneLabels:flo.labels, deskFree:Math.max(deskFree,0),
+      floorTabs, deskFiltersView,
+      lunchTabs, lunchIsLocali:s.lunchTab==='locali', lunchIsBox:s.lunchTab==='box',
+      localiView, boxesView,
+      teamList, teamSelCount,
+      profileRows:[
+        {icon:'badge',label:'Reparto',value:'Product',line:'#F1EADF'},
+        {icon:'calendar_month',label:'Policy ibrida',value:'3 gg / settimana',line:'#F1EADF'},
+        {icon:'redeem',label:'Buono pasto',value:'€ 8,00 / giorno',line:'#F1EADF'},
+        {icon:'restaurant_menu',label:'Dieta',value:'Vegetariana',line:'transparent'},
+      ],
+      prefChips:[
+        {icon:'desktop_windows',label:'Monitor 27"'},{icon:'height',label:'Standing'},
+        {icon:'groups',label:'Vicino al team'},{icon:'window',label:'Finestra'},
+      ],
+      navItems:nav,
+      sheetOpen:!!sheet, sheet:sheet||{lines:[]},
+      toast:s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

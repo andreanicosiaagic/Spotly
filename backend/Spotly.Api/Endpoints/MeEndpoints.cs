@@ -1,23 +1,15 @@
+using System.Security.Claims;
+using Spotly.Api.Auth;
+
 namespace Spotly.Api.Endpoints;
 
 public static class MeEndpoints
 {
-    public static void MapMeEndpoints(this IEndpointRouteBuilder app)
+    public static void MapMeEndpoints(this IEndpointRouteBuilder app) => app.MapGet("/api/me", (HttpContext context) => Results.Ok(new
     {
-        app.MapGet("/api/me", (HttpContext ctx) =>
-        {
-            // Easy Auth populates HttpContext.User from X-MS-CLIENT-PRINCIPAL header.
-            // In local dev, a middleware simulates this from X-Dev-User header.
-            var user = ctx.User;
-            var userId = user.FindFirst("oid")?.Value
-                      ?? user.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value
-                      ?? "anonymous";
-            var name = user.FindFirst("name")?.Value
-                    ?? user.FindFirst("preferred_username")?.Value
-                    ?? "Unknown";
-            var roles = user.FindAll("roles").Select(c => c.Value).ToArray();
-
-            return Results.Ok(new { userId, name, roles });
-        }).WithTags("Auth");
-    }
+        userId = CurrentUser.Id(context.User),
+        name = context.User.Identity?.Name ?? "Mock user",
+        roles = context.User.FindAll(ClaimTypes.Role).Select(x => x.Value).ToArray(),
+        department = CurrentUser.Department(context.User),
+    })).WithTags("Auth").RequireAuthorization("Employee");
 }

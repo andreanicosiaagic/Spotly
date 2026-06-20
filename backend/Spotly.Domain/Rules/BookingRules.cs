@@ -42,15 +42,14 @@ public static class BookingRules
     /// R-02 (lunch): lunch box cutoff is 23:59 of the previous day.
     /// Returns an error message if violated, null if ok.
     /// </summary>
-    public static string? ValidateLunchBookingWindow(DateOnly bookingDate)
+    public static string? ValidateLunchBookingWindow(DateOnly bookingDate, bool isLunchBox, DateTime utcNow)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var now = DateTime.UtcNow;
-        if (bookingDate < today)
-            return "R-02: non puoi prenotare per una data passata.";
-        if (bookingDate == today && now.Hour >= 23 && now.Minute >= 59)
-            return "R-02: il termine per prenotare il pranzo di oggi è scaduto (23:59 del giorno prima).";
-        return null;
+        var baseError = ValidateBookingWindow(bookingDate, utcNow);
+        if (baseError is not null) return baseError;
+        var today = DateOnly.FromDateTime(utcNow);
+        return isLunchBox && bookingDate <= today
+            ? "R-02: il lunch box deve essere prenotato entro le 23:59 del giorno precedente."
+            : null;
     }
 
     /// <summary>
@@ -65,10 +64,20 @@ public static class BookingRules
     /// <summary>
     /// R-09: Returns true if cancellation is free (before cutoff on booking day).
     /// </summary>
-    public static bool IsFreeCancellation(DateOnly bookingDate)
+    public static bool IsFreeCancellation(DateOnly bookingDate) => IsFreeCancellation(bookingDate, DateTime.UtcNow);
+
+    public static bool IsFreeCancellation(DateOnly bookingDate, DateTime utcNow)
     {
-        var now = DateTime.UtcNow;
-        var today = DateOnly.FromDateTime(now);
-        return bookingDate > today || (bookingDate == today && now.Hour < FreeCancellationCutoffHour);
+        var today = DateOnly.FromDateTime(utcNow);
+        return bookingDate > today || (bookingDate == today && utcNow.Hour < FreeCancellationCutoffHour);
+    }
+
+    public static string? ValidateBookingWindow(DateOnly bookingDate, DateTime utcNow)
+    {
+        var today = DateOnly.FromDateTime(utcNow);
+        if (bookingDate < today) return "R-02: non puoi prenotare per una data passata.";
+        if (bookingDate > today.AddDays(MaxBookingWindowDays))
+            return $"R-02: puoi prenotare al massimo {MaxBookingWindowDays} giorni in anticipo.";
+        return null;
     }
 }

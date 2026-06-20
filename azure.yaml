@@ -1,0 +1,11 @@
+name: spotly
+metadata:
+  template: spotly-poc@0.1.0
+infra:
+  provider: bicep
+  path: infra
+services:
+  api:
+    project: ./backend/Spotly.Api
+    language: dotnet
+    host: appservice

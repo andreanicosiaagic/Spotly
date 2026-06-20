@@ -8,4 +8,4 @@ export const SEED_USERS: User[] = [
 ]
 
 // Default user for local dev (simulates Easy Auth header)
-export const DEV_USER = SEED_USERS[0]
+export const DEV_USER = SEED_USERS[1]

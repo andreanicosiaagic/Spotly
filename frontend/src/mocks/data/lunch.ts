@@ -3,8 +3,8 @@ import type { Restaurant, RestaurantSlot, MenuItem, LunchBox } from '../../types
 const today = new Date().toISOString().split('T')[0]
 
 export const SEED_RESTAURANTS: Restaurant[] = [
-  { restaurantId: 'R01', locationId: 'HQ', name: 'Bistrot Verde',  capacity: 40 },
-  { restaurantId: 'R02', locationId: 'HQ', name: 'La Tavola',      capacity: 30 },
+  { restaurantId: 'R01', name: 'Bistrot Verde', capacity: 40, availableSeats: 18, sequence: 1, updatedAtUtc: new Date().toISOString(), partnerChannelConfigured: true },
+  { restaurantId: 'R02', name: 'La Tavola', capacity: 30, availableSeats: 9, sequence: 1, updatedAtUtc: new Date().toISOString(), partnerChannelConfigured: true },
 ]
 
 export const SEED_RESTAURANT_SLOTS: RestaurantSlot[] = [

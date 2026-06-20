@@ -7,7 +7,7 @@ public class MockCalendarIntegration(ILogger<MockCalendarIntegration> logger) : 
 {
     public Task CreateEventAsync(string userId, string title, DateOnly date, string description)
     {
-        logger.LogInformation("[MOCK Calendar] CreateEvent userId={UserId} title={Title} date={Date}", userId, title, date);
+        logger.LogInformation("[MOCK Calendar] Event creation simulated for date={Date}", date);
         return Task.CompletedTask;
     }
 }
@@ -16,7 +16,7 @@ public class MockAccessControlSystem(ILogger<MockAccessControlSystem> logger) : 
 {
     public Task<bool> ValidateCheckInAsync(string userId, string resourceId)
     {
-        logger.LogInformation("[MOCK AccessControl] CheckIn userId={UserId} resourceId={ResourceId} → OK", userId, resourceId);
+        logger.LogInformation("[MOCK AccessControl] Check-in validation simulated");
         return Task.FromResult(true);
     }
 }
@@ -25,7 +25,7 @@ public class MockRestaurantPartner(ILogger<MockRestaurantPartner> logger) : IRes
 {
     public Task<bool> ConfirmOrderAsync(string restaurantId, string slotId, string userId)
     {
-        logger.LogInformation("[MOCK RestaurantPartner] ConfirmOrder restaurantId={RestaurantId} slotId={SlotId}", restaurantId, slotId);
+        logger.LogInformation("[MOCK RestaurantPartner] Order confirmation simulated");
         return Task.FromResult(true);
     }
 }
@@ -34,13 +34,13 @@ public class MockWelfareProvider(ILogger<MockWelfareProvider> logger) : IWelfare
 {
     public Task<decimal> GetAvailableBudgetAsync(string userId)
     {
-        logger.LogInformation("[MOCK Welfare] GetBudget userId={UserId} → 999.99", userId);
+        logger.LogInformation("[MOCK Welfare] Budget lookup simulated");
         return Task.FromResult(999.99m);
     }
 
     public Task<bool> DeductAsync(string userId, decimal amount)
     {
-        logger.LogInformation("[MOCK Welfare] Deduct userId={UserId} amount={Amount} → OK", userId, amount);
+        logger.LogInformation("[MOCK Welfare] Budget deduction simulated amount={Amount}", amount);
         return Task.FromResult(true);
     }
 }
@@ -49,7 +49,7 @@ public class MockNotificationService(ILogger<MockNotificationService> logger) : 
 {
     public Task SendAsync(string userId, string subject, string body)
     {
-        logger.LogInformation("[MOCK Notification] To={UserId} Subject={Subject}", userId, subject);
+        logger.LogInformation("[MOCK Notification] Notification delivery simulated");
         return Task.CompletedTask;
     }
 }

@@ -1,106 +1,113 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Serilog;
-using Spotly.Api.Dtos;
+using Spotly.Api.Auth;
 using Spotly.Api.Endpoints;
 using Spotly.Api.Hubs;
+using Spotly.Api.Services;
 using Spotly.Domain.Interfaces;
 using Spotly.Infrastructure.Integrations;
+using Spotly.Infrastructure.Persistence;
 using Spotly.Infrastructure.Repositories;
 
-// -- Serilog bootstrap ------------------------------------------------------
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .CreateBootstrapLogger();
+Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger();
 
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+    builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration).WriteTo.Console());
+    builder.Services.AddProblemDetails();
+    builder.Services.ConfigureHttpJsonOptions(options =>
+        options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 
-    builder.Host.UseSerilog((ctx, cfg) =>
-        cfg.ReadFrom.Configuration(ctx.Configuration).WriteTo.Console());
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173"];
+    builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.WithOrigins(allowedOrigins)
+        .AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
-    // -- CORS --------------------------------------------------------------
-    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-        ?? ["http://localhost:5173"];
+    builder.Services.AddAuthentication(SpotlyAuthenticationHandler.AuthenticationScheme)
+        .AddScheme<AuthenticationSchemeOptions, SpotlyAuthenticationHandler>(SpotlyAuthenticationHandler.AuthenticationScheme, _ => { });
+    builder.Services.AddAuthorizationBuilder()
+        .AddPolicy("Employee", policy => policy.RequireRole("Dipendente", "Manager", "Facility", "Admin"))
+        .AddPolicy("Manager", policy => policy.RequireRole("Manager", "Facility", "Admin"))
+        .AddPolicy("Facility", policy => policy.RequireRole("Facility", "Admin"))
+        .AddPolicy("Admin", policy => policy.RequireRole("Admin"));
 
-    builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-        p.WithOrigins(allowedOrigins)
-         .AllowAnyHeader()
-         .AllowAnyMethod()
-         .AllowCredentials()));
+    var signalR = builder.Services.AddSignalR();
+    var signalRConnection = builder.Configuration["Azure:SignalR:ConnectionString"];
+    if (!string.IsNullOrWhiteSpace(signalRConnection)) signalR.AddAzureSignalR(signalRConnection);
 
-    // -- SignalR -----------------------------------------------------------
-    var signalRBuilder = builder.Services.AddSignalR();
-    // Uncomment for Azure SignalR Service in production:
-    // if (!string.IsNullOrEmpty(builder.Configuration["Azure:SignalR:ConnectionString"]))
-    //     signalRBuilder.AddAzureSignalR(builder.Configuration["Azure:SignalR:ConnectionString"]!);
-
-    // -- Repositories (InMemory for POC) -----------------------------------
+    var databaseProvider = builder.Configuration["Database:Provider"] ?? "InMemory";
+    builder.Services.AddDbContextFactory<SpotlyDbContext>(options =>
+    {
+        if (databaseProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+        {
+            var connectionString = builder.Configuration.GetConnectionString("Spotly")
+                ?? throw new InvalidOperationException("ConnectionStrings:Spotly is required when Database:Provider=SqlServer.");
+            options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure(3));
+        }
+        else options.UseInMemoryDatabase(builder.Configuration["Database:Name"] ?? "spotly-poc");
+    });
     builder.Services.AddSingleton<IParkingRepository, InMemoryParkingRepository>();
     builder.Services.AddSingleton<IDeskRepository, InMemoryDeskRepository>();
     builder.Services.AddSingleton<ILunchRepository, InMemoryLunchRepository>();
 
-    // -- Mock integrations -------------------------------------------------
     builder.Services.AddSingleton<ICalendarIntegration, MockCalendarIntegration>();
     builder.Services.AddSingleton<IAccessControlSystem, MockAccessControlSystem>();
     builder.Services.AddSingleton<IRestaurantPartner, MockRestaurantPartner>();
     builder.Services.AddSingleton<IWelfareProvider, MockWelfareProvider>();
     builder.Services.AddSingleton<INotificationService, MockNotificationService>();
-
-    // -- FluentValidation --------------------------------------------------
+    builder.Services.AddSingleton<ICollaborationAvailabilityProvider, MockTeamsCollaborationProvider>();
+    builder.Services.AddSingleton<IRestaurantPartnerProtocol, RestaurantPartnerProtocol>();
+    builder.Services.AddSingleton<MockTelegramRestaurantGateway>();
+    builder.Services.AddSingleton<IRestaurantMessagingGateway>(services => services.GetRequiredService<MockTelegramRestaurantGateway>());
+    builder.Services.AddSingleton<IRestaurantDemoGateway>(services => services.GetRequiredService<MockTelegramRestaurantGateway>());
+    builder.Services.AddSingleton<RestaurantLiveService>();
+    builder.Services.AddSingleton(TimeProvider.System);
+    builder.Services.AddHostedService<BookingLifecycleService>();
+    builder.Services.AddHostedService<RestaurantAvailabilityPollingService>();
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
-
-    // -- OpenAPI -----------------------------------------------------------
     builder.Services.AddOpenApi();
-
-    // -- Health checks -----------------------------------------------------
     builder.Services.AddHealthChecks();
 
     var app = builder.Build();
-
-    app.UseSerilogRequestLogging();
-    app.UseCors();
-
-    if (app.Environment.IsDevelopment())
+    await using (var scope = app.Services.CreateAsyncScope())
     {
-        app.MapOpenApi();
-        // Simulate Easy Auth in local dev via X-Dev-User header
-        app.Use(async (ctx, next) =>
-        {
-            var devUser = ctx.Request.Headers["X-Dev-User"].FirstOrDefault();
-            if (devUser is not null && ctx.User.Identity?.IsAuthenticated != true)
-            {
-                var claims = new[]
-                {
-                    new System.Security.Claims.Claim("oid", devUser),
-                    new System.Security.Claims.Claim("preferred_username", $"{devUser}@spotly.test"),
-                    new System.Security.Claims.Claim("roles", "Dipendente"),
-                };
-                ctx.User = new System.Security.Claims.ClaimsPrincipal(
-                    new System.Security.Claims.ClaimsIdentity(claims, "DevAuth"));
-            }
-            await next();
-        });
+        var db = scope.ServiceProvider.GetRequiredService<SpotlyDbContext>();
+        await db.Database.EnsureCreatedAsync();
+        await SpotlyDbSeeder.SeedAsync(db, DateOnly.FromDateTime(DateTime.UtcNow));
     }
 
-    // -- Routes ------------------------------------------------------------
-    app.MapHub<AvailabilityHub>("/availability");
-    app.MapHealthChecks("/health");
+    app.UseExceptionHandler();
+    app.UseSerilogRequestLogging(options => options.EnrichDiagnosticContext = (diagnostics, context) =>
+    {
+        diagnostics.Set("RequestHost", context.Request.Host.Value);
+        diagnostics.Set("RequestScheme", context.Request.Scheme);
+    });
+    app.UseHttpsRedirection();
+    app.UseCors();
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    if (app.Environment.IsDevelopment()) app.MapOpenApi().AllowAnonymous();
+    app.MapHealthChecks("/health").AllowAnonymous();
+    app.MapHub<AvailabilityHub>("/availability").RequireAuthorization("Employee");
     app.MapParkingEndpoints();
     app.MapDeskEndpoints();
     app.MapLunchEndpoints();
     app.MapMeEndpoints();
-
+    app.MapCollaborationEndpoints();
     app.Run();
 }
-catch (Exception ex)
+catch (Exception exception)
 {
-    Log.Fatal(ex, "Application terminated unexpectedly");
+    Log.Fatal(exception, "Application terminated unexpectedly");
 }
 finally
 {
-    Log.CloseAndFlush();
+    await Log.CloseAndFlushAsync();
 }
 
-// Make Program accessible for integration tests
-public partial class Program { }
+public partial class Program;

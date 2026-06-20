@@ -1,16 +1,27 @@
+using Spotly.Domain.Entities;
+
 namespace Spotly.Api.Dtos;
 
-// Requests
-public record CreateParkingBookingRequest(string SpotId, string BookingDate, string UserId);
-public record CreateDeskBookingRequest(string DeskId, string BookingDate, string UserId);
+public record CreateParkingBookingRequest(string SpotId, string BookingDate);
+public record CreateDeskBookingRequest(string DeskId, string BookingDate);
 public record CreateLunchBookingRequest(
     string BookingDate,
-    string UserId,
     bool IsLunchBox,
     string? RestaurantId = null,
     string? SlotId = null,
     string? LunchBoxId = null,
     string? Allergens = null);
-
-// Availability (SignalR payload)
 public record AvailabilityUpdate(string ResourceId, string ResourceType, string NewStatus);
+public record CancellationResponse(string Status);
+public record RestaurantAvailabilityUpdate(
+    string RestaurantId,
+    string Name,
+    int Capacity,
+    int AvailableSeats,
+    long Sequence,
+    DateTime UpdatedAtUtc,
+    string Source);
+public record RestaurantMessageEvent(string RestaurantId, string Kind, string Outcome, long Sequence, DateTime ReceivedAtUtc);
+public record SimulateRestaurantAvailabilityRequest(int AvailableSeats);
+public record SimulateBookingOutcomeRequest(string Code);
+public record RestaurantBookingResponse(LunchBooking Booking, string PartnerCode, int AvailableSeats, string? PartnerReference);

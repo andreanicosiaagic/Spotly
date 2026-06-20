@@ -1,122 +1,155 @@
+using Microsoft.EntityFrameworkCore;
 using Spotly.Domain.Entities;
 using Spotly.Domain.Interfaces;
-using Spotly.Infrastructure.Seed;
+using Spotly.Domain.Rules;
+using Spotly.Infrastructure.Persistence;
 
 namespace Spotly.Infrastructure.Repositories;
 
-public class InMemoryParkingRepository : IParkingRepository
+public sealed class InMemoryParkingRepository(IDbContextFactory<SpotlyDbContext> factory) : IParkingRepository
 {
-    private readonly List<ParkingSpot> _spots = SeedData.ParkingSpots();
-    private readonly List<ParkingBooking> _bookings = [];
-    private readonly Lock _lock = new();
+    private readonly Lock _gate = new();
 
-    public Task<IEnumerable<ParkingSpot>> GetSpotsAsync(string locationId)
+    public Task<IEnumerable<ParkingSpot>> GetSpotsAsync(string locationId, DateOnly date)
     {
-        lock (_lock)
+        lock (_gate)
         {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var bookedIds = _bookings
-                .Where(b => b.BookingDate == today && b.Status == BookingStatus.Active)
-                .Select(b => b.SpotId)
-                .ToHashSet();
-
-            var result = _spots
-                .Where(s => s.LocationId == locationId)
-                .Select(s => s with { Status = bookedIds.Contains(s.SpotId) ? ResourceStatus.Occupied : s.Status })
-                .AsEnumerable();
-            return Task.FromResult(result);
+            using var db = factory.CreateDbContext();
+            var now = DateTime.UtcNow;
+            var bookings = db.ParkingBookings.AsNoTracking()
+                .Where(x => x.BookingDate == date && x.Status == BookingStatus.Active).ToList();
+            var result = db.ParkingSpots.AsNoTracking().Where(x => x.LocationId == locationId).ToList()
+                .Select(spot => spot with
+                {
+                    Status = bookings.Any(x => x.SpotId == spot.SpotId && x.LockedUntil == null)
+                        ? ResourceStatus.Occupied
+                        : bookings.Any(x => x.SpotId == spot.SpotId && x.LockedUntil > now)
+                            ? ResourceStatus.Pending
+                            : spot.Status,
+                }).ToArray();
+            return Task.FromResult<IEnumerable<ParkingSpot>>(result);
         }
     }
 
     public Task<ParkingSpot?> GetSpotByIdAsync(string spotId)
     {
-        lock (_lock) { return Task.FromResult(_spots.FirstOrDefault(s => s.SpotId == spotId)); }
+        using var db = factory.CreateDbContext();
+        return Task.FromResult(db.ParkingSpots.AsNoTracking().FirstOrDefault(x => x.SpotId == spotId));
     }
 
     public Task<IEnumerable<ParkingBooking>> GetBookingsByDateAsync(string locationId, DateOnly date)
     {
-        lock (_lock)
-        {
-            var bookedSpotIds = _spots.Where(s => s.LocationId == locationId).Select(s => s.SpotId).ToHashSet();
-            return Task.FromResult(_bookings.Where(b => b.BookingDate == date && bookedSpotIds.Contains(b.SpotId)).AsEnumerable());
-        }
+        using var db = factory.CreateDbContext();
+        var ids = db.ParkingSpots.Where(x => x.LocationId == locationId).Select(x => x.SpotId).ToHashSet();
+        return Task.FromResult<IEnumerable<ParkingBooking>>(db.ParkingBookings.AsNoTracking()
+            .Where(x => x.BookingDate == date && ids.Contains(x.SpotId)).ToArray());
     }
 
     public Task<ParkingBooking?> GetActiveBookingAsync(string userId, DateOnly date)
     {
-        lock (_lock)
+        using var db = factory.CreateDbContext();
+        return Task.FromResult(db.ParkingBookings.AsNoTracking().FirstOrDefault(x =>
+            x.UserId == userId && x.BookingDate == date && x.Status == BookingStatus.Active && x.LockedUntil == null));
+    }
+
+    public Task<BookingAttempt<ParkingBooking>> TryCreateBookingAsync(ParkingBooking booking)
+    {
+        lock (_gate)
         {
-            return Task.FromResult(_bookings.FirstOrDefault(b =>
-                b.UserId == userId && b.BookingDate == date && b.Status == BookingStatus.Active));
+            using var db = factory.CreateDbContext();
+            var now = DateTime.UtcNow;
+            var spot = db.ParkingSpots.FirstOrDefault(x => x.SpotId == booking.SpotId);
+            if (spot is null) return Task.FromResult(new BookingAttempt<ParkingBooking>(null, BookingFailure.NotFound));
+            if (spot.Status is ResourceStatus.Occupied or ResourceStatus.Reserved)
+                return Task.FromResult(new BookingAttempt<ParkingBooking>(null, BookingFailure.ResourceUnavailable));
+            if (db.ParkingBookings.Any(x => x.UserId == booking.UserId && x.BookingDate == booking.BookingDate &&
+                x.Status == BookingStatus.Active && x.LockedUntil == null))
+                return Task.FromResult(new BookingAttempt<ParkingBooking>(null, BookingFailure.AlreadyBooked));
+            if (db.ParkingBookings.Any(x => x.SpotId == booking.SpotId && x.BookingDate == booking.BookingDate &&
+                x.Status == BookingStatus.Active && (x.LockedUntil == null || x.LockedUntil > now) && x.LockedByUserId != booking.UserId))
+                return Task.FromResult(new BookingAttempt<ParkingBooking>(null, BookingFailure.ResourceUnavailable));
+
+            var ownLock = db.ParkingBookings.FirstOrDefault(x => x.SpotId == booking.SpotId &&
+                x.BookingDate == booking.BookingDate && x.Status == BookingStatus.Active &&
+                x.LockedByUserId == booking.UserId && x.LockedUntil > now);
+            if (ownLock is null) db.ParkingBookings.Add(booking);
+            else
+            {
+                ownLock.LockedUntil = null;
+                ownLock.LockedByUserId = null;
+                ownLock.CheckInDeadlineUtc = booking.CheckInDeadlineUtc;
+                booking = ownLock;
+            }
+            db.SaveChanges();
+            return Task.FromResult(new BookingAttempt<ParkingBooking>(booking, BookingFailure.None));
         }
     }
 
-    public Task<ParkingBooking> CreateBookingAsync(ParkingBooking booking)
+    public Task<CancellationOutcome> CancelBookingAsync(string bookingId, string userId, DateTime utcNow)
     {
-        lock (_lock)
+        lock (_gate)
         {
-            _bookings.Add(booking);
-            var spot = _spots.FirstOrDefault(s => s.SpotId == booking.SpotId);
-            if (spot is not null) spot.Status = ResourceStatus.Occupied;
-            return Task.FromResult(booking);
+            using var db = factory.CreateDbContext();
+            var booking = db.ParkingBookings.FirstOrDefault(x => x.BookingId == bookingId && x.UserId == userId && x.Status == BookingStatus.Active);
+            if (booking is null) return Task.FromResult(new CancellationOutcome(false));
+            booking.Status = BookingRules.IsFreeCancellation(booking.BookingDate, utcNow) ? BookingStatus.Cancelled : BookingStatus.NoShow;
+            db.SaveChanges();
+            return Task.FromResult(new CancellationOutcome(true, booking.Status, booking.SpotId, booking.BookingDate));
         }
     }
 
-    public Task<bool> CancelBookingAsync(string bookingId, string userId)
+    public Task<bool> CheckInAsync(string bookingId, string userId, DateTime utcNow)
     {
-        lock (_lock)
+        lock (_gate)
         {
-            var booking = _bookings.FirstOrDefault(b => b.BookingId == bookingId && b.UserId == userId);
+            using var db = factory.CreateDbContext();
+            var booking = db.ParkingBookings.FirstOrDefault(x => x.BookingId == bookingId && x.UserId == userId &&
+                x.Status == BookingStatus.Active && x.LockedUntil == null && x.CheckInDeadlineUtc >= utcNow);
             if (booking is null) return Task.FromResult(false);
-            booking.Status = BookingStatus.Cancelled;
-            var spot = _spots.FirstOrDefault(s => s.SpotId == booking.SpotId);
-            if (spot is not null) spot.Status = ResourceStatus.Available;
+            booking.CheckedInAtUtc = utcNow;
+            db.SaveChanges();
             return Task.FromResult(true);
         }
     }
 
     public Task<bool> TryAcquireLockAsync(string spotId, string userId, TimeSpan lockDuration)
     {
-        lock (_lock)
+        lock (_gate)
         {
-            var spot = _spots.FirstOrDefault(s => s.SpotId == spotId);
-            if (spot is null || spot.Status != ResourceStatus.Available) return Task.FromResult(false);
-            // Check no unexpired lock exists from another user
-            var existingLock = _bookings.FirstOrDefault(b =>
-                b.SpotId == spotId &&
-                b.LockedUntil.HasValue &&
-                b.LockedUntil > DateTime.UtcNow &&
-                b.LockedByUserId != userId);
-            if (existingLock is not null) return Task.FromResult(false);
-            spot.Status = ResourceStatus.Pending;
-            var lockEntry = new ParkingBooking
+            using var db = factory.CreateDbContext();
+            var now = DateTime.UtcNow;
+            var date = DateOnly.FromDateTime(now);
+            var spot = db.ParkingSpots.FirstOrDefault(x => x.SpotId == spotId);
+            if (spot is null || spot.Status != ResourceStatus.Available || db.ParkingBookings.Any(x =>
+                x.SpotId == spotId && x.BookingDate == date && x.Status == BookingStatus.Active &&
+                (x.LockedUntil == null || x.LockedUntil > now))) return Task.FromResult(false);
+            db.ParkingBookings.Add(new ParkingBooking
             {
-                SpotId = spotId,
-                UserId = userId,
-                BookingDate = DateOnly.FromDateTime(DateTime.UtcNow),
-                Status = BookingStatus.Active,
-                LockedUntil = DateTime.UtcNow.Add(lockDuration),
-                LockedByUserId = userId,
-            };
-            _bookings.Add(lockEntry);
+                SpotId = spotId, UserId = userId, BookingDate = date, Status = BookingStatus.Active,
+                LockedUntil = now.Add(lockDuration), LockedByUserId = userId,
+            });
+            db.SaveChanges();
             return Task.FromResult(true);
         }
     }
 
-    public Task ReleaseExpiredLocksAsync()
+    public Task<IReadOnlyList<ReleasedResource>> ReleaseExpiredLocksAsync(DateTime utcNow) => ReleaseAsync(
+        x => x.Status == BookingStatus.Active && x.LockedUntil != null && x.LockedUntil < utcNow, BookingStatus.Cancelled);
+
+    public Task<IReadOnlyList<ReleasedResource>> ReleaseNoShowsAsync(DateTime utcNow) => ReleaseAsync(
+        x => x.Status == BookingStatus.Active && x.LockedUntil == null && x.CheckedInAtUtc == null && x.CheckInDeadlineUtc < utcNow,
+        BookingStatus.NoShow);
+
+    private Task<IReadOnlyList<ReleasedResource>> ReleaseAsync(Func<ParkingBooking, bool> predicate, BookingStatus status)
     {
-        lock (_lock)
+        lock (_gate)
         {
-            var expired = _bookings.Where(b => b.LockedUntil.HasValue && b.LockedUntil < DateTime.UtcNow).ToList();
-            foreach (var b in expired)
-            {
-                b.LockedUntil = null;
-                b.LockedByUserId = null;
-                b.Status = BookingStatus.Cancelled;
-                var spot = _spots.FirstOrDefault(s => s.SpotId == b.SpotId);
-                if (spot?.Status == ResourceStatus.Pending) spot.Status = ResourceStatus.Available;
-            }
+            using var db = factory.CreateDbContext();
+            var expired = db.ParkingBookings.Where(predicate).ToList();
+            foreach (var booking in expired) booking.Status = status;
+            db.SaveChanges();
+            return Task.FromResult<IReadOnlyList<ReleasedResource>>(expired
+                .Select(x => new ReleasedResource(x.SpotId, x.BookingDate)).ToArray());
         }
-        return Task.CompletedTask;
     }
 }
