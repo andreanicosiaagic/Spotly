@@ -18,13 +18,13 @@ interface CatDrop {
 
 const LOCAL_CAT_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
-  <path fill="#F6C75F" d="M18 36 24 14l16 12h16l16-12 6 22c4 6 6 13 6 20 0 20-16 36-36 36S12 76 12 56c0-7 2-14 6-20Z"/>
-  <path fill="#E39A48" d="m28 25 10 8H28zm40 0-10 8h10z"/>
-  <circle cx="35" cy="52" r="5" fill="#2B2622"/>
-  <circle cx="61" cy="52" r="5" fill="#2B2622"/>
-  <path d="M48 58c2 0 4 2 4 4s-2 5-4 5-4-3-4-5 2-4 4-4Z" fill="#EC6A4D"/>
-  <path d="M36 70c4 4 20 4 24 0" fill="none" stroke="#2B2622" stroke-linecap="round" stroke-width="4"/>
-  <path d="M22 56h10m32 0h10M20 64h12m32 0h12" fill="none" stroke="#2B2622" stroke-linecap="round" stroke-width="3"/>
+  <path fill="var(--c-f6c75f)" d="M18 36 24 14l16 12h16l16-12 6 22c4 6 6 13 6 20 0 20-16 36-36 36S12 76 12 56c0-7 2-14 6-20Z"/>
+  <path fill="var(--c-e39a48)" d="m28 25 10 8H28zm40 0-10 8h10z"/>
+  <circle cx="35" cy="52" r="5" fill="var(--c-2b2622)"/>
+  <circle cx="61" cy="52" r="5" fill="var(--c-2b2622)"/>
+  <path d="M48 58c2 0 4 2 4 4s-2 5-4 5-4-3-4-5 2-4 4-4Z" fill="var(--c-ec6a4d)"/>
+  <path d="M36 70c4 4 20 4 24 0" fill="none" stroke="var(--c-2b2622)" stroke-linecap="round" stroke-width="4"/>
+  <path d="M22 56h10m32 0h10M20 64h12m32 0h12" fill="none" stroke="var(--c-2b2622)" stroke-linecap="round" stroke-width="3"/>
 </svg>
 `)}` as const
 

@@ -7,10 +7,10 @@ import type { DeskSpot } from '../types'
 // (WC, scala/ascensore, cucina, sale, lounge) sono contesto non prenotabile.
 
 const STATUS_STYLE = {
-  available: { fill: '#D8EFE1', stroke: '#78B891', text: '#266E49' },
-  occupied: { fill: '#E9E3D9', stroke: '#D9CFC0', text: '#928879' },
-  pending: { fill: '#FCEDE7', stroke: '#EC6A4D', text: '#C0563C' },
-  reserved: { fill: '#F8E9C9', stroke: '#D6AD60', text: '#8B651E' },
+  available: { fill: 'var(--c-d8efe1)', stroke: 'var(--c-78b891)', text: 'var(--c-266e49)' },
+  occupied: { fill: 'var(--c-e9e3d9)', stroke: 'var(--c-d9cfc0)', text: 'var(--c-928879)' },
+  pending: { fill: 'var(--c-fcede7)', stroke: 'var(--c-ec6a4d)', text: 'var(--c-c0563c)' },
+  reserved: { fill: 'var(--c-f8e9c9)', stroke: 'var(--c-d6ad60)', text: 'var(--c-8b651e)' },
 } as const
 
 const STATUS_LABEL: Record<DeskSpot['status'], string> = {
@@ -38,13 +38,13 @@ const PLAN_TERRA: Plan = {
   viewBox: [520, 720],
   maxWidth: 440,
   rooms: [
-    { x: 44, y: 44, w: 256, h: 166, label: 'Open Space Nord', tint: '#EAF4EE', kind: 'open' },
-    { x: 44, y: 224, w: 256, h: 136, label: 'Uffici Ovest', tint: '#EEF2FA', kind: 'office', divider: 172 },
-    { x: 44, y: 374, w: 256, h: 150, label: 'Operativo Sud', tint: '#FBEFE9', kind: 'open' },
-    { x: 44, y: 540, w: 256, h: 150, label: 'Reception', tint: '#F4F1EA', kind: 'service' },
-    { x: 314, y: 44, w: 162, h: 126, label: 'WC', tint: '#EEF1F4', kind: 'wc' },
-    { x: 314, y: 200, w: 162, h: 180, label: 'Scala · Ascensore', tint: '#EDE7DD', kind: 'core' },
-    { x: 314, y: 410, w: 162, h: 280, label: 'Sala Riunioni', tint: '#F4F1EA', kind: 'meeting' },
+    { x: 44, y: 44, w: 256, h: 166, label: 'Open Space Nord', tint: 'var(--c-eaf4ee)', kind: 'open' },
+    { x: 44, y: 224, w: 256, h: 136, label: 'Uffici Ovest', tint: 'var(--c-eef2fa)', kind: 'office', divider: 172 },
+    { x: 44, y: 374, w: 256, h: 150, label: 'Operativo Sud', tint: 'var(--c-fbefe9)', kind: 'open' },
+    { x: 44, y: 540, w: 256, h: 150, label: 'Reception', tint: 'var(--c-f4f1ea)', kind: 'service' },
+    { x: 314, y: 44, w: 162, h: 126, label: 'WC', tint: 'var(--c-eef1f4)', kind: 'wc' },
+    { x: 314, y: 200, w: 162, h: 180, label: 'Scala · Ascensore', tint: 'var(--c-ede7dd)', kind: 'core' },
+    { x: 314, y: 410, w: 162, h: 280, label: 'Sala Riunioni', tint: 'var(--c-f4f1ea)', kind: 'meeting' },
   ],
   entrance: { x: 240, y: 702 },
   deskSize: { w: 54, h: 40 },
@@ -60,27 +60,27 @@ const PLAN_PRIMO: Plan = {
   viewBox: [820, 560],
   rooms: [
     // colonna uffici a Ovest
-    { x: 44, y: 44, w: 166, h: 88, label: 'Sala', tint: '#F4F1EA', kind: 'meeting' },
-    { x: 44, y: 138, w: 166, h: 92, label: 'Ufficio', tint: '#EEF2FA', kind: 'office' },
-    { x: 44, y: 236, w: 166, h: 92, label: 'Ufficio', tint: '#EEF2FA', kind: 'office' },
-    { x: 44, y: 334, w: 166, h: 86, label: 'Ufficio', tint: '#F4F1EA', kind: 'office' },
-    { x: 44, y: 440, w: 166, h: 80, label: 'Sala Riunioni', tint: '#F4F1EA', kind: 'meeting' },
+    { x: 44, y: 44, w: 166, h: 88, label: 'Sala', tint: 'var(--c-f4f1ea)', kind: 'meeting' },
+    { x: 44, y: 138, w: 166, h: 92, label: 'Ufficio', tint: 'var(--c-eef2fa)', kind: 'office' },
+    { x: 44, y: 236, w: 166, h: 92, label: 'Ufficio', tint: 'var(--c-eef2fa)', kind: 'office' },
+    { x: 44, y: 334, w: 166, h: 86, label: 'Ufficio', tint: 'var(--c-f4f1ea)', kind: 'office' },
+    { x: 44, y: 440, w: 166, h: 80, label: 'Sala Riunioni', tint: 'var(--c-f4f1ea)', kind: 'meeting' },
     // servizi al centro
-    { x: 222, y: 44, w: 118, h: 76, label: 'WC', tint: '#EEF1F4', kind: 'wc' },
-    { x: 222, y: 126, w: 118, h: 70, label: 'Cucina', tint: '#FBF1E6', kind: 'service' },
-    { x: 222, y: 206, w: 118, h: 154, label: 'Scala · Ascensore', tint: '#EDE7DD', kind: 'core' },
+    { x: 222, y: 44, w: 118, h: 76, label: 'WC', tint: 'var(--c-eef1f4)', kind: 'wc' },
+    { x: 222, y: 126, w: 118, h: 70, label: 'Cucina', tint: 'var(--c-fbf1e6)', kind: 'service' },
+    { x: 222, y: 206, w: 118, h: 154, label: 'Scala · Ascensore', tint: 'var(--c-ede7dd)', kind: 'core' },
     // fronte uffici / sale in alto
-    { x: 352, y: 44, w: 138, h: 76, label: 'Ufficio', tint: '#EEF2FA', kind: 'office' },
-    { x: 496, y: 44, w: 138, h: 76, label: 'Sala A', tint: '#F4F1EA', kind: 'meeting' },
-    { x: 640, y: 44, w: 140, h: 76, label: 'Sala B', tint: '#F4F1EA', kind: 'meeting' },
+    { x: 352, y: 44, w: 138, h: 76, label: 'Ufficio', tint: 'var(--c-eef2fa)', kind: 'office' },
+    { x: 496, y: 44, w: 138, h: 76, label: 'Sala A', tint: 'var(--c-f4f1ea)', kind: 'meeting' },
+    { x: 640, y: 44, w: 140, h: 76, label: 'Sala B', tint: 'var(--c-f4f1ea)', kind: 'meeting' },
     // open space centrale
-    { x: 352, y: 140, w: 308, h: 262, label: 'Open Space Centrale', tint: '#EAF4EE', kind: 'open' },
+    { x: 352, y: 140, w: 308, h: 262, label: 'Open Space Centrale', tint: 'var(--c-eaf4ee)', kind: 'open' },
     // lounge a Est
-    { x: 672, y: 140, w: 108, h: 262, label: 'Lounge · Caffè', tint: '#F3EEF8', kind: 'service' },
+    { x: 672, y: 140, w: 108, h: 262, label: 'Lounge · Caffè', tint: 'var(--c-f3eef8)', kind: 'service' },
     // sale riunioni a Sud
-    { x: 222, y: 420, w: 176, h: 100, label: 'Sala C', tint: '#F4F1EA', kind: 'meeting' },
-    { x: 408, y: 420, w: 176, h: 100, label: 'Sala D', tint: '#F4F1EA', kind: 'meeting' },
-    { x: 594, y: 420, w: 186, h: 100, label: 'Sala E', tint: '#F4F1EA', kind: 'meeting' },
+    { x: 222, y: 420, w: 176, h: 100, label: 'Sala C', tint: 'var(--c-f4f1ea)', kind: 'meeting' },
+    { x: 408, y: 420, w: 176, h: 100, label: 'Sala D', tint: 'var(--c-f4f1ea)', kind: 'meeting' },
+    { x: 594, y: 420, w: 186, h: 100, label: 'Sala E', tint: 'var(--c-f4f1ea)', kind: 'meeting' },
   ],
   deskSize: { w: 58, h: 42 },
   deskGeom: {
@@ -107,7 +107,7 @@ export function FloorMap({ floor, desks, onSelect, busy = false, monitorOnly = f
     <svg viewBox={`0 0 ${vw} ${vh}`} className="mx-auto block h-auto w-full" style={{ maxWidth: plan.maxWidth }}
       role="group" aria-label={`Piantina ${plan.name}`} fontFamily="'Plus Jakarta Sans', sans-serif">
       {/* perimetro edificio */}
-      <rect x={8} y={8} width={vw - 16} height={vh - 16} rx={16} fill="#F3EFE7" stroke="#CBBFA9" strokeWidth={3} />
+      <rect x={8} y={8} width={vw - 16} height={vh - 16} rx={16} fill="var(--c-f3efe7)" stroke="var(--c-cbbfa9)" strokeWidth={3} />
 
       {plan.rooms.map((room, index) => <RoomShape key={index} room={room} />)}
 
@@ -126,11 +126,11 @@ export function FloorMap({ floor, desks, onSelect, busy = false, monitorOnly = f
 function RoomShape({ room }: { room: Room }) {
   return (
     <g>
-      <rect x={room.x} y={room.y} width={room.w} height={room.h} rx={8} fill={room.tint} stroke="#C7BBA6" strokeWidth={2} />
+      <rect x={room.x} y={room.y} width={room.w} height={room.h} rx={8} fill={room.tint} stroke="var(--c-c7bba6)" strokeWidth={2} />
       {room.divider !== undefined &&
-        <line x1={room.divider} y1={room.y} x2={room.divider} y2={room.y + room.h} stroke="#C7BBA6" strokeWidth={2} />}
+        <line x1={room.divider} y1={room.y} x2={room.divider} y2={room.y + room.h} stroke="var(--c-c7bba6)" strokeWidth={2} />}
       <RoomDetail room={room} />
-      <text x={room.x + 9} y={room.y + 17} fontSize={11} fontWeight={800} fill="#9A8F7C" letterSpacing="0.04em">
+      <text x={room.x + 9} y={room.y + 17} fontSize={11} fontWeight={800} fill="var(--c-9a8f7c)" letterSpacing="0.04em">
         {room.label.toUpperCase()}
       </text>
     </g>
@@ -144,9 +144,9 @@ function RoomDetail({ room }: { room: Room }) {
     // gradini + vano ascensore
     const steps = Array.from({ length: 6 }, (_, i) => room.y + 34 + i * 13)
     return (
-      <g stroke="#BCAF98" strokeWidth={1.5}>
+      <g stroke="var(--c-bcaf98)" strokeWidth={1.5}>
         {steps.map(y => <line key={y} x1={room.x + 14} y1={y} x2={room.x + room.w / 2 - 8} y2={y} />)}
-        <rect x={room.x + room.w / 2 + 6} y={room.y + 34} width={room.w / 2 - 22} height={48} fill="#E2D9C9" />
+        <rect x={room.x + room.w / 2 + 6} y={room.y + 34} width={room.w / 2 - 22} height={48} fill="var(--c-e2d9c9)" />
         <line x1={room.x + room.w / 2 + 6} y1={room.y + 34} x2={room.x + room.w - 16} y2={room.y + 82} />
         <line x1={room.x + room.w - 16} y1={room.y + 34} x2={room.x + room.w / 2 + 6} y2={room.y + 82} />
       </g>
@@ -154,7 +154,7 @@ function RoomDetail({ room }: { room: Room }) {
   }
   if (room.kind === 'wc') {
     return (
-      <g fill="none" stroke="#B6C2CC" strokeWidth={1.5}>
+      <g fill="none" stroke="var(--c-b6c2cc)" strokeWidth={1.5}>
         <circle cx={room.x + 26} cy={cy + 6} r={8} />
         <circle cx={room.x + 52} cy={cy + 6} r={8} />
         <rect x={room.x + room.w - 38} y={cy - 2} width={20} height={14} rx={3} />
@@ -163,7 +163,7 @@ function RoomDetail({ room }: { room: Room }) {
   }
   if (room.kind === 'meeting') {
     return <rect x={cx - room.w * 0.28} y={cy - room.h * 0.18} width={room.w * 0.56} height={room.h * 0.36} rx={6}
-      fill="none" stroke="#CDBE9E" strokeWidth={1.5} />
+      fill="none" stroke="var(--c-cdbe9e)" strokeWidth={1.5} />
   }
   return null
 }
@@ -171,8 +171,8 @@ function RoomDetail({ room }: { room: Room }) {
 function Entrance({ x, y }: { x: number; y: number }) {
   return (
     <g>
-      <path d={`M${x} ${y} l12 14 l-24 0 Z`} fill="#EC6A4D" />
-      <text x={x} y={y + 30} textAnchor="middle" fontSize={10} fontWeight={800} fill="#C0563C">INGRESSO</text>
+      <path d={`M${x} ${y} l12 14 l-24 0 Z`} fill="var(--c-ec6a4d)" />
+      <text x={x} y={y + 30} textAnchor="middle" fontSize={10} fontWeight={800} fill="var(--c-c0563c)">INGRESSO</text>
     </g>
   )
 }

@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useLogoClickEasterEgg } from '../hooks/use-logo-click-easter-egg'
 import { DEMO_PROFILES } from '../mocks/data/users'
 import { AppIcon } from './AppIcon'
+import { ThemeToggle } from './ThemeToggle'
 
 const navigation = [
   { to: '/', label: 'Oggi', icon: 'home' },
@@ -25,11 +26,14 @@ export function Navbar({ onLogoActivate }: NavbarProps) {
       <nav className="sidebar-nav" aria-label="Navigazione principale">
         {navigation.map(item => <NavItem key={item.to} {...item} />)}
       </nav>
+      <div className="mb-3 flex items-center gap-2 px-2 text-[12px] font-semibold text-text-muted">
+        <ThemeToggle /><span>Tema chiaro / scuro</span>
+      </div>
       <div className="sidebar-user">
         <div className="avatar">{initials}</div><div className="min-w-0 flex-1"><strong>{user?.name}</strong><span>{user?.roles[0]} · Team Product</span>
-          {import.meta.env.DEV && <label className="mt-2 block text-[10px] font-semibold text-[#7B7266]">
+          {import.meta.env.DEV && <label className="mt-2 block text-[10px] font-semibold text-[var(--c-7b7266)]">
             Profilo demo
-            <select value={profile.id} onChange={(event) => setProfileId(event.target.value)} className="mt-1 block w-full rounded-[10px] border border-border bg-white px-2 py-2 text-[12px] text-text">
+            <select value={profile.id} onChange={(event) => setProfileId(event.target.value)} className="mt-1 block w-full rounded-[10px] border border-border bg-surface px-2 py-2 text-[12px] text-text">
               {DEMO_PROFILES.map((option) => <option key={option.id} value={option.id}>{option.roles[0]} · {option.name}</option>)}
             </select>
           </label>}
@@ -39,7 +43,8 @@ export function Navbar({ onLogoActivate }: NavbarProps) {
     <header className="mobile-header">
       <NavLink to="/" onClick={handleLogoClick} className="mobile-brand"><img src="/spotly-logo.png" alt="Spotly" /></NavLink>
       <div className="flex items-center gap-2">
-        {import.meta.env.DEV && <select aria-label="Profilo demo" value={profile.id} onChange={(event) => setProfileId(event.target.value)} className="max-w-[150px] rounded-[10px] border border-border bg-white px-2 py-2 text-[12px] text-text">
+        <ThemeToggle />
+        {import.meta.env.DEV && <select aria-label="Profilo demo" value={profile.id} onChange={(event) => setProfileId(event.target.value)} className="max-w-[150px] rounded-[10px] border border-border bg-surface px-2 py-2 text-[12px] text-text">
           {DEMO_PROFILES.map((option) => <option key={option.id} value={option.id}>{option.roles[0]}</option>)}
         </select>}
         <div className="avatar">{initials}</div>

@@ -158,19 +158,19 @@ export default function LunchPage() {
     <div className="mb-[18px] flex flex-wrap gap-2.5">
       <Tab active={mode === 'restaurants'} onClick={() => setMode('restaurants')} label="Locali convenzionati" />
       <Tab active={mode === 'lunchbox'} onClick={() => setMode('lunchbox')} label="Lunch Box" />
-      {isFacility() && <button onClick={() => tick.mutate()} disabled={tick.isPending} className="ml-auto flex items-center gap-1.5 rounded-[13px] border-[1.5px] border-dashed border-[#EC6A4D] bg-white px-3 py-2.5 text-xs font-bold text-[#C0563C]"><AppIcon name="sync" />Aggiornamento demo</button>}
+      {isFacility() && <button onClick={() => tick.mutate()} disabled={tick.isPending} className="ml-auto flex items-center gap-1.5 rounded-[13px] border-[1.5px] border-dashed border-[var(--c-ec6a4d)] bg-surface px-3 py-2.5 text-xs font-bold text-[var(--c-c0563c)]"><AppIcon name="sync" />Aggiornamento demo</button>}
     </div>
 
-    <div className="mb-4 flex items-center justify-between rounded-[16px] border border-border bg-white px-4 py-3 text-xs">
-      <span className="font-semibold text-[#5C544A]">Realtime {realtimeStatus === 'connected' ? 'attivo' : realtimeStatus === 'reconnecting' ? 'in riconnessione' : 'offline'}</span>
+    <div className="mb-4 flex items-center justify-between rounded-[16px] border border-border bg-surface px-4 py-3 text-xs">
+      <span className="font-semibold text-[var(--c-5c544a)]">Realtime {realtimeStatus === 'connected' ? 'attivo' : realtimeStatus === 'reconnecting' ? 'in riconnessione' : 'offline'}</span>
       <span className="text-text-muted">{selectedDate}</span>
     </div>
 
-    {(booking.error || lunchBoxBooking.error || cancellation.error) && <div role="alert" className="spotly-alert mb-4 border border-[#F3C9BC] bg-[#FBE7E1] text-[#A8432C]">
+    {(booking.error || lunchBoxBooking.error || cancellation.error) && <div role="alert" className="spotly-alert mb-4 border border-[var(--c-f3c9bc)] bg-[var(--c-fbe7e1)] text-[var(--c-a8432c)]">
       {booking.error?.message ?? lunchBoxBooking.error?.message ?? cancellation.error?.message}
     </div>}
 
-    {confirmation && <div role="status" className="spotly-alert mb-4 flex items-center gap-3 border border-[#B8DCC7] bg-[#E7F3EC] text-[#266E49]">
+    {confirmation && <div role="status" className="spotly-alert mb-4 flex items-center gap-3 border border-[var(--c-b8dcc7)] bg-[var(--c-e7f3ec)] text-[var(--c-266e49)]">
       <AppIcon name="check_circle" className="text-[23px]" />
       <div>
         <strong className="block text-sm">Prenotazione confermata</strong>
@@ -181,11 +181,11 @@ export default function LunchPage() {
     {bookingQuery.data && <section className="spotly-card mb-5 p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="m-0 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#A89E92]">Prenotazione attiva</p>
+          <p className="m-0 text-[11px] font-extrabold uppercase tracking-[.08em] text-[var(--c-a89e92)]">Prenotazione attiva</p>
           <h2 className="mt-1 mb-1 text-base font-bold">{bookingQuery.data.isLunchBox ? 'Lunch Box' : `Ristorante ${bookingQuery.data.restaurantId}`}</h2>
           <p className="m-0 text-sm text-text-muted">{bookingQuery.data.slotId ? `Slot ${bookingQuery.data.slotId}` : 'Consegna in ufficio'} · {formatDateLabel(bookingQuery.data.bookingDate, { day: 'numeric', month: 'long', year: 'numeric' })}</p>
         </div>
-        <button onClick={() => cancellation.mutate(bookingQuery.data!.bookingId)} disabled={cancellation.isPending} className="rounded-[12px] border border-[#F3C9BC] bg-[#FFF7F2] px-3 py-2 text-xs font-bold text-[#C0563C]">Annulla</button>
+        <button onClick={() => cancellation.mutate(bookingQuery.data!.bookingId)} disabled={cancellation.isPending} className="rounded-[12px] border border-[var(--c-f3c9bc)] bg-[var(--c-fff7f2)] px-3 py-2 text-xs font-bold text-[var(--c-c0563c)]">Annulla</button>
       </div>
     </section>}
 
@@ -204,19 +204,19 @@ export default function LunchPage() {
               setSelectedSlotId(null)
               setSelectedMenuItemIds([])
             }}
-            className={`spotly-card cursor-pointer p-[18px] text-left transition hover:-translate-y-0.5 hover:shadow-md ${selected ? 'ring-2 ring-[#2B2622]' : ''}`}>
+            className={`spotly-card cursor-pointer p-[18px] text-left transition hover:-translate-y-0.5 hover:shadow-md ${selected ? 'ring-2 ring-[var(--c-2b2622)]' : ''}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="m-0 text-base font-bold">{restaurant.name}</h2>
                 <p className="mt-1 mb-0 text-[12px] text-text-muted">Telegram demo · seq {restaurant.sequence}</p>
               </div>
-              <span className={`rounded-lg px-2.5 py-1 text-[10px] font-extrabold ${available ? 'bg-[#E7F3EC] text-[#2F8A5C]' : 'bg-[#FCEDE7] text-[#C0563C]'}`}>{available ? 'DISPONIBILE' : 'COMPLETO'}</span>
+              <span className={`rounded-lg px-2.5 py-1 text-[10px] font-extrabold ${available ? 'bg-[var(--c-e7f3ec)] text-[var(--c-2f8a5c)]' : 'bg-[var(--c-fcede7)] text-[var(--c-c0563c)]'}`}>{available ? 'DISPONIBILE' : 'COMPLETO'}</span>
             </div>
             <div className="mt-4 flex items-center gap-2.5">
-              <div className="h-[7px] flex-1 overflow-hidden rounded-full bg-[#EFE9DF]"><div className="h-full rounded-full bg-[#2F8A5C]" style={{ width: `${ratio}%` }} /></div>
-              <strong className="whitespace-nowrap text-xs text-[#2F8A5C]">{restaurant.availableSeats} posti</strong>
+              <div className="h-[7px] flex-1 overflow-hidden rounded-full bg-[var(--c-efe9df)]"><div className="h-full rounded-full bg-[var(--c-2f8a5c)]" style={{ width: `${ratio}%` }} /></div>
+              <strong className="whitespace-nowrap text-xs text-[var(--c-2f8a5c)]">{restaurant.availableSeats} posti</strong>
             </div>
-            <div className="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-[#2F8A5C]"><AppIcon name="redeem" className="text-[18px]" />Buono pasto accettato</div>
+            <div className="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-[var(--c-2f8a5c)]"><AppIcon name="redeem" className="text-[18px]" />Buono pasto accettato</div>
           </button>
         })}
       </div>
@@ -224,11 +224,11 @@ export default function LunchPage() {
       {selectedRestaurant && <section className="spotly-card mt-5 p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="m-0 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#A89E92]">Dettaglio prenotazione</p>
+            <p className="m-0 text-[11px] font-extrabold uppercase tracking-[.08em] text-[var(--c-a89e92)]">Dettaglio prenotazione</p>
             <h2 className="mt-1 mb-1 text-lg font-bold">{selectedRestaurant.name}</h2>
             <p className="m-0 text-sm text-text-muted">Seleziona fascia oraria e almeno un piatto per completare la prenotazione.</p>
           </div>
-          <span className="rounded-lg bg-[#F2EDE4] px-3 py-1 text-[11px] font-extrabold text-[#6F6659]">{selectedRestaurant.availableSeats} posti residui</span>
+          <span className="rounded-lg bg-[var(--c-f2ede4)] px-3 py-1 text-[11px] font-extrabold text-[var(--c-6f6659)]">{selectedRestaurant.availableSeats} posti residui</span>
         </div>
 
         <div className="mt-5 grid gap-5 lg:grid-cols-[280px_1fr]">
@@ -236,7 +236,7 @@ export default function LunchPage() {
             <h3 className="mt-0 mb-3 text-sm font-extrabold">Slot disponibili</h3>
             <div className="space-y-2">
               {slotOptions.map((slot) => <button key={slot.slotId} onClick={() => setSelectedSlotId(slot.slotId)} disabled={slot.available <= 0}
-                className={`flex w-full items-center justify-between rounded-[14px] border px-3 py-3 text-sm font-semibold ${selectedSlotId === slot.slotId ? 'border-[#2B2622] bg-[#2B2622] text-white' : 'border-border bg-white text-[#5C544A]'} disabled:cursor-not-allowed disabled:opacity-50`}>
+                className={`flex w-full items-center justify-between rounded-[14px] border px-3 py-3 text-sm font-semibold ${selectedSlotId === slot.slotId ? 'border-[var(--c-2b2622)] bg-[var(--c-2b2622)] text-white' : 'border-border bg-surface text-[var(--c-5c544a)]'} disabled:cursor-not-allowed disabled:opacity-50`}>
                 <span>{slot.slotTime}</span><span>{slot.available}/{slot.capacity}</span>
               </button>)}
             </div>
@@ -245,13 +245,13 @@ export default function LunchPage() {
           <div>
             <h3 className="mt-0 mb-3 text-sm font-extrabold">Menu del giorno</h3>
             <div className="grid gap-4 md:grid-cols-2">
-              {Object.entries(menuByCategory).map(([category, items]) => <div key={category} className="rounded-[16px] border border-border bg-[#FCFBF8] p-4">
-                <h4 className="mt-0 mb-3 text-xs font-extrabold uppercase tracking-[.08em] text-[#A89E92]">{category}</h4>
+              {Object.entries(menuByCategory).map(([category, items]) => <div key={category} className="rounded-[16px] border border-border bg-[var(--c-fcfbf8)] p-4">
+                <h4 className="mt-0 mb-3 text-xs font-extrabold uppercase tracking-[.08em] text-[var(--c-a89e92)]">{category}</h4>
                 <div className="space-y-2.5">
-                  {items.map((item) => <label key={item.itemId} className="flex cursor-pointer items-start gap-3 text-sm text-[#5C544A]">
+                  {items.map((item) => <label key={item.itemId} className="flex cursor-pointer items-start gap-3 text-sm text-[var(--c-5c544a)]">
                     <input type="checkbox" checked={selectedMenuItemIds.includes(item.itemId)}
                       onChange={(event) => setSelectedMenuItemIds((current) => event.target.checked ? [...current, item.itemId] : current.filter((value) => value !== item.itemId))}
-                      className="mt-0.5 h-4 w-4 rounded border-border accent-[#2B2622]" />
+                      className="mt-0.5 h-4 w-4 rounded border-border accent-[var(--c-2b2622)]" />
                     <span><strong className="block">{item.name}</strong>{item.allergens && <span className="text-xs text-text-muted">Allergeni: {item.allergens}</span>}</span>
                   </label>)}
                 </div>
@@ -262,7 +262,7 @@ export default function LunchPage() {
               <button
                 onClick={() => booking.mutate()}
                 disabled={booking.isPending || bookingQuery.data !== null || selectedRestaurant.availableSeats <= 0 || !selectedSlotId || selectedMenuItemIds.length === 0}
-                className="rounded-[14px] border-0 bg-[#2B2622] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-[#C8C2B7]">
+                className="rounded-[14px] border-0 bg-[var(--c-2b2622)] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-[var(--c-c8c2b7)]">
                 {booking.isPending ? 'Invio al locale…' : 'Conferma prenotazione'}
               </button>
               <span className="text-xs text-text-muted">{selectedSlotId ? `Slot selezionato: ${selectedSlotId}` : 'Seleziona uno slot'} · {selectedMenuItemIds.length} piatti scelti</span>
@@ -273,7 +273,7 @@ export default function LunchPage() {
     </>}
 
     {mode === 'lunchbox' && <>
-      {lunchBoxEligibilityQuery.data && <div className={`mb-4 flex items-center gap-2.5 rounded-[14px] p-3.5 text-[13px] ${lunchBoxEligibilityQuery.data.eligible ? 'bg-[#E7F3EC] text-[#266E49]' : 'bg-[#FCEDE7] text-[#9A4B36]'}`}>
+      {lunchBoxEligibilityQuery.data && <div className={`mb-4 flex items-center gap-2.5 rounded-[14px] p-3.5 text-[13px] ${lunchBoxEligibilityQuery.data.eligible ? 'bg-[var(--c-e7f3ec)] text-[var(--c-266e49)]' : 'bg-[var(--c-fcede7)] text-[var(--c-9a4b36)]'}`}>
         <AppIcon name="lunch_dining" className="text-[21px]" />
         <span>{lunchBoxEligibilityQuery.data.reason}{!lunchBoxEligibilityQuery.data.eligible && ` · scenario demo pronto dal ${lunchBoxEligibilityQuery.data.demoDate}`}</span>
       </div>}
@@ -281,10 +281,10 @@ export default function LunchPage() {
         {(lunchBoxesQuery.data ?? []).map((box) => <button key={box.boxId} onClick={() => lunchBoxBooking.mutate(box.boxId)}
           disabled={!lunchBoxEligibilityQuery.data?.eligible || lunchBoxBooking.isPending || bookingQuery.data !== null}
           className="spotly-card cursor-pointer p-[18px] text-left transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-55">
-          <div className="grid h-[52px] w-[52px] place-items-center rounded-[15px] bg-[#FCEDE7] text-[#EC6A4D]"><AppIcon name="lunch_dining" className="text-[28px]" /></div>
+          <div className="grid h-[52px] w-[52px] place-items-center rounded-[15px] bg-[var(--c-fcede7)] text-[var(--c-ec6a4d)]"><AppIcon name="lunch_dining" className="text-[28px]" /></div>
           <h2 className="mt-3.5 mb-1 text-[15px] font-bold">{box.name}</h2>
-          <p className="m-0 text-[12px] leading-5 text-[#726A60]">{box.description}</p>
-          {box.allergens && <p className="mt-1 mb-0 text-[11px] text-[#A89E92]">Allergeni: {box.allergens}</p>}
+          <p className="m-0 text-[12px] leading-5 text-[var(--c-726a60)]">{box.description}</p>
+          {box.allergens && <p className="mt-1 mb-0 text-[11px] text-[var(--c-a89e92)]">Allergeni: {box.allergens}</p>}
         </button>)}
       </div>
     </>}
@@ -308,5 +308,5 @@ export default function LunchPage() {
 }
 
 function Tab({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-  return <button onClick={onClick} aria-pressed={active} className={`rounded-[13px] border-[1.5px] px-5 py-2.5 text-sm font-bold ${active ? 'border-[#2B2622] bg-[#2B2622] text-white' : 'border-border bg-white text-[#726A60]'}`}>{label}</button>
+  return <button onClick={onClick} aria-pressed={active} className={`rounded-[13px] border-[1.5px] px-5 py-2.5 text-sm font-bold ${active ? 'border-[var(--c-2b2622)] bg-[var(--c-2b2622)] text-white' : 'border-border bg-surface text-[var(--c-726a60)]'}`}>{label}</button>
 }

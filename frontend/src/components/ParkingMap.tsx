@@ -6,10 +6,10 @@ import type { ParkingSpot } from '../types'
 // posti e fascia speciale (EV / disabili / ospiti) verso il corpo di fabbrica.
 
 const STATUS_STYLE = {
-  available: { fill: '#D8EFE1', stroke: '#78B891', text: '#266E49' },
-  occupied: { fill: '#E9E3D9', stroke: '#D9CFC0', text: '#928879' },
-  pending: { fill: '#FCEDE7', stroke: '#EC6A4D', text: '#C0563C' },
-  reserved: { fill: '#F8E9C9', stroke: '#D6AD60', text: '#8B651E' },
+  available: { fill: 'var(--c-d8efe1)', stroke: 'var(--c-78b891)', text: 'var(--c-266e49)' },
+  occupied: { fill: 'var(--c-e9e3d9)', stroke: 'var(--c-d9cfc0)', text: 'var(--c-928879)' },
+  pending: { fill: 'var(--c-fcede7)', stroke: 'var(--c-ec6a4d)', text: 'var(--c-c0563c)' },
+  reserved: { fill: 'var(--c-f8e9c9)', stroke: 'var(--c-d6ad60)', text: 'var(--c-8b651e)' },
 } as const
 
 const STATUS_LABEL: Record<ParkingSpot['status'], string> = {
@@ -52,55 +52,55 @@ export function ParkingMap({ spots, onSelect, busy = false }: ParkingMapProps) {
     <svg viewBox="0 0 740 440" className="block h-auto w-full" role="group" aria-label="Mappa del parcheggio esterno"
       fontFamily="'Plus Jakarta Sans', sans-serif">
       {/* asfalto */}
-      <rect x={8} y={8} width={724} height={424} rx={22} fill="#ECEFE9" stroke="#DBE0D4" strokeWidth={2} />
+      <rect x={8} y={8} width={724} height={424} rx={22} fill="var(--c-ecefe9)" stroke="var(--c-dbe0d4)" strokeWidth={2} />
 
       {/* marciapiede / percorso pedonale verso l'ingresso */}
-      <rect x={8} y={8} width={62} height={300} rx={20} fill="#E6E0D3" />
-      <line x1={39} y1={70} x2={39} y2={300} stroke="#CFC7B6" strokeWidth={2} strokeDasharray="2 9" />
+      <rect x={8} y={8} width={62} height={300} rx={20} fill="var(--c-e6e0d3)" />
+      <line x1={39} y1={70} x2={39} y2={300} stroke="var(--c-cfc7b6)" strokeWidth={2} strokeDasharray="2 9" />
 
       {/* bussola Nord */}
       <g transform="translate(38 44)">
-        <circle r={17} fill="#fff" stroke="#C9BDAB" strokeWidth={1.5} />
-        <path d="M0 -11 L4 2 L0 -1 L-4 2 Z" fill="#EC6A4D" />
-        <text y={13} textAnchor="middle" fontSize={9} fontWeight={800} fill="#A8987E">N</text>
+        <circle r={17} fill="var(--c-ffffff)" stroke="var(--c-c9bdab)" strokeWidth={1.5} />
+        <path d="M0 -11 L4 2 L0 -1 L-4 2 Z" fill="var(--c-ec6a4d)" />
+        <text y={13} textAnchor="middle" fontSize={9} fontWeight={800} fill="var(--c-a8987e)">N</text>
       </g>
 
       {/* ingresso principale */}
       <g>
-        <rect x={86} y={10} width={150} height={26} rx={9} fill="#2B2622" />
-        <text x={161} y={27} textAnchor="middle" fontSize={12} fontWeight={700} fill="#fff">Ingresso principale</text>
+        <rect x={86} y={10} width={150} height={26} rx={9} fill="var(--c-2b2622)" />
+        <text x={161} y={27} textAnchor="middle" fontSize={12} fontWeight={700} fill="var(--c-ffffff)">Ingresso principale</text>
       </g>
 
       {/* secchioni & cassette postali */}
       <g>
-        <rect x={300} y={20} width={132} height={28} rx={7} fill="#E0DACD" stroke="#CFC4B0" strokeWidth={1.5} />
-        <rect x={309} y={27} width={13} height={14} rx={2} fill="#B9AE99" />
-        <rect x={326} y={27} width={13} height={14} rx={2} fill="#B9AE99" />
-        <text x={366} y={38} textAnchor="middle" fontSize={10.5} fontWeight={700} fill="#8A7F6E">Secchioni · Cassette postali</text>
+        <rect x={300} y={20} width={132} height={28} rx={7} fill="var(--c-e0dacd)" stroke="var(--c-cfc4b0)" strokeWidth={1.5} />
+        <rect x={309} y={27} width={13} height={14} rx={2} fill="var(--c-b9ae99)" />
+        <rect x={326} y={27} width={13} height={14} rx={2} fill="var(--c-b9ae99)" />
+        <text x={366} y={38} textAnchor="middle" fontSize={10.5} fontWeight={700} fill="var(--c-8a7f6e)">Secchioni · Cassette postali</text>
       </g>
 
       {/* strip "Area Partner" riservata (lato edificio) */}
       <g>
-        <rect x={82} y={128} width={112} height={188} rx={12} fill="#FBEDE6" stroke="#E0A78F" strokeWidth={1.5} strokeDasharray="7 5" />
-        <text x={74} y={222} textAnchor="middle" fontSize={11} fontWeight={800} fill="#C77E62" letterSpacing="0.12em"
+        <rect x={82} y={128} width={112} height={188} rx={12} fill="var(--c-fbede6)" stroke="var(--c-e0a78f)" strokeWidth={1.5} strokeDasharray="7 5" />
+        <text x={74} y={222} textAnchor="middle" fontSize={11} fontWeight={800} fill="var(--c-c77e62)" letterSpacing="0.12em"
           transform="rotate(-90 74 222)">AREA PARTNER</text>
       </g>
 
       {/* fascia/striscia della fila principale (manto + linee) */}
-      <rect x={190} y={100} width={430} height={88} rx={10} fill="#E5E9E0" />
+      <rect x={190} y={100} width={430} height={88} rx={10} fill="var(--c-e5e9e0)" />
 
       {/* corpo di fabbrica (edificio) */}
       <g>
-        <rect x={626} y={100} width={92} height={232} rx={10} fill="#EAE1D2" stroke="#DACDB8" strokeWidth={1.5} />
-        <text x={672} y={216} textAnchor="middle" fontSize={12} fontWeight={800} fill="#A8987E" letterSpacing="0.14em"
+        <rect x={626} y={100} width={92} height={232} rx={10} fill="var(--c-eae1d2)" stroke="var(--c-dacdb8)" strokeWidth={1.5} />
+        <text x={672} y={216} textAnchor="middle" fontSize={12} fontWeight={800} fill="var(--c-a8987e)" letterSpacing="0.14em"
           transform="rotate(-90 672 216)">EDIFICIO</text>
       </g>
 
       {/* aree verdi */}
-      <g fill="#E0EBD7" stroke="#C7D8B9" strokeWidth={1.5}>
+      <g fill="var(--c-e0ebd7)" stroke="var(--c-c7d8b9)" strokeWidth={1.5}>
         <path d="M96 372 q60 -26 132 -8 q70 18 150 6 q70 -12 150 4 q40 8 80 2 l0 46 q-256 16 -512 0 Z" />
       </g>
-      <text x={350} y={406} textAnchor="middle" fontSize={11} fontWeight={800} fill="#8FA77E" letterSpacing="0.16em">VERDE</text>
+      <text x={350} y={406} textAnchor="middle" fontSize={11} fontWeight={800} fill="var(--c-8fa77e)" letterSpacing="0.16em">VERDE</text>
 
       {/* posti auto */}
       {spots.map(spot => {

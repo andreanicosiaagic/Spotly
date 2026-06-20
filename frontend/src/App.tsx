@@ -60,12 +60,12 @@ function AuthBootstrap() {
   ]), [activateCats])
 
   if (meQuery.isLoading && !initialized) {
-    return <div className="min-h-screen bg-[#FBF6EF] px-6 py-20 text-center text-sm text-text-muted">Caricamento profilo demo…</div>
+    return <div className="min-h-screen bg-[var(--c-fbf6ef)] px-6 py-20 text-center text-sm text-text-muted">Caricamento profilo demo…</div>
   }
 
   if (meQuery.isError) {
-    return <div className="min-h-screen bg-[#FBF6EF] px-6 py-20 text-center">
-      <div className="mx-auto max-w-md rounded-[24px] border border-[#F3C9BC] bg-white p-6 text-left">
+    return <div className="min-h-screen bg-[var(--c-fbf6ef)] px-6 py-20 text-center">
+      <div className="mx-auto max-w-md rounded-[24px] border border-[var(--c-f3c9bc)] bg-surface p-6 text-left">
         <h1 className="mt-0 mb-2 text-xl font-bold text-text">Profilo demo non disponibile</h1>
         <p className="mb-0 text-sm text-text-muted">{meQuery.error.message}</p>
       </div>
