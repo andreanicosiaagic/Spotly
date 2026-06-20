@@ -8,7 +8,7 @@ param entraTenantId string
 @description('App registration client ID configured with Spotly app roles.')
 param entraClientId string
 param allowedOrigin string = ''
-param appServicePlanSku string = 'B1'
+param appServicePlanSku string = 'B2'
 
 var normalizedEnvironment = toLower(replace(environmentName, '-', ''))
 var suffix = uniqueString(subscription().id, environmentName, location)
@@ -46,3 +46,6 @@ output AZURE_RESOURCE_GROUP string = resourceGroup.name
 output SERVICE_API_RESOURCE_NAME string = resources.outputs.apiName
 output SERVICE_API_URI string = resources.outputs.apiUri
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = resources.outputs.applicationInsightsConnectionString
+output AZURE_SQL_SERVER_FQDN string = resources.outputs.sqlServerFqdn
+output AZURE_KEY_VAULT_URI string = resources.outputs.keyVaultUri
+output AZURE_STORAGE_ACCOUNT_NAME string = resources.outputs.storageAccountName
