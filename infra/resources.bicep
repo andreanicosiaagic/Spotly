@@ -2,6 +2,7 @@ targetScope = 'resourceGroup'
 
 param location string
 param sqlLocation string
+param deploySql bool
 param namePrefix string
 param suffix string
 param tags object
@@ -201,7 +202,7 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
 // ── Azure SQL (Serverless GP_S_Gen5) ──────────────────────────────────────────
 // publicNetworkAccess: Enabled – POC allows pipeline access; traffic from App
 // Service always uses the Private Endpoint (DNS resolves to 10.1.2.x via VNet).
-resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
+resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = if (deploySql) {
   name: sqlServerName
   location: sqlLocation   // GP_S_Gen5 may be restricted in the main region
   tags: tags
@@ -218,7 +219,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
 }
 
 // Set App Service Managed Identity as AAD admin
-resource sqlAadAdmin 'Microsoft.Sql/servers/administrators@2023-08-01' = {
+resource sqlAadAdmin 'Microsoft.Sql/servers/administrators@2023-08-01' = if (deploySql) {
   parent: sqlServer
   name: 'ActiveDirectory'
   properties: {
@@ -230,14 +231,14 @@ resource sqlAadAdmin 'Microsoft.Sql/servers/administrators@2023-08-01' = {
 }
 
 // Disable SQL authentication – MI only (must be after AAD admin is set)
-resource sqlAadOnlyAuth 'Microsoft.Sql/servers/azureADOnlyAuthentications@2023-08-01' = {
+resource sqlAadOnlyAuth 'Microsoft.Sql/servers/azureADOnlyAuthentications@2023-08-01' = if (deploySql) {
   parent: sqlServer
   name: 'Default'
   properties: { azureADOnlyAuthentication: true }
   dependsOn: [sqlAadAdmin]
 }
 
-resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01' = {
+resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01' = if (deploySql) {
   parent: sqlServer
   name: 'SpotlyDB'
   location: sqlLocation
@@ -312,7 +313,7 @@ resource floorPlansContainer 'Microsoft.Storage/storageAccounts/blobServices/con
 }
 
 // ── Private Endpoints (snet-pe) ───────────────────────────────────────────────
-resource peSql 'Microsoft.Network/privateEndpoints@2023-11-01' = {
+resource peSql 'Microsoft.Network/privateEndpoints@2023-11-01' = if (deploySql) {
   name: '${namePrefix}-pe-sql-${suffix}'
   location: location
   tags: tags
@@ -367,7 +368,7 @@ resource peStorage 'Microsoft.Network/privateEndpoints@2023-11-01' = {
 }
 
 // DNS Zone Groups – auto-populate private DNS when PE is provisioned
-resource peSqlDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
+resource peSqlDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = if (deploySql) {
   parent: peSql
   name: 'default'
   properties: {
@@ -416,8 +417,8 @@ resource appSettings 'Microsoft.Web/sites/config@2024-11-01' = {
     ApplicationInsightsAgent_EXTENSION_VERSION: '~3'
     // SignalR: MSI auth – no connection-string secret needed
     Azure__SignalR__ConnectionString: 'Endpoint=https://${signalR.properties.hostName};AuthType=azure.msi;Version=1.0;'
-    // SQL: MSI auth via Active Directory Default
-    Azure__Sql__ConnectionString: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Database=SpotlyDB;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;'
+    // SQL: MSI auth via Active Directory Default (empty when deploySql=false)
+    Azure__Sql__ConnectionString: deploySql ? 'Server=tcp:${any(sqlServer).properties.fullyQualifiedDomainName},1433;Database=SpotlyDB;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;' : ''
     // Key Vault URI for secret references
     Azure__KeyVault__Uri: keyVault.properties.vaultUri
     // Storage: MSI auth – only account name needed
@@ -506,6 +507,6 @@ resource authSettings 'Microsoft.Web/sites/config@2024-11-01' = {
 output apiName string = webApp.name
 output apiUri string = 'https://${webApp.properties.defaultHostName}'
 output applicationInsightsConnectionString string = applicationInsights.properties.ConnectionString
-output sqlServerFqdn string = sqlServer.properties.fullyQualifiedDomainName
+output sqlServerFqdn string = deploySql ? any(sqlServer).properties.fullyQualifiedDomainName : ''
 output keyVaultUri string = keyVault.properties.vaultUri
 output storageAccountName string = storageAccount.name
