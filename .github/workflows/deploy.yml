@@ -117,8 +117,7 @@ jobs:
           SQL_DATABASE="${{ steps.infra.outputs.SQL_DATABASE }}"
           RG="${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}"
 
-          az extension show --name rdbms-connect &>/dev/null || \
-            az extension add --name rdbms-connect --yes
+          az extension add --name rdbms-connect --upgrade --yes
 
           az sql db query \
             --server "$SQL_SERVER" \
@@ -206,8 +205,7 @@ jobs:
           SQL_DATABASE="${{ steps.infra.outputs.SQL_DATABASE }}"
           RG="${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}"
 
-          az extension show --name rdbms-connect &>/dev/null || \
-            az extension add --name rdbms-connect --yes
+          az extension add --name rdbms-connect --upgrade --yes
 
           az sql db query \
             --server "$SQL_SERVER" \
@@ -295,8 +293,7 @@ jobs:
           SQL_DATABASE="${{ steps.infra.outputs.SQL_DATABASE }}"
           RG="${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}"
 
-          az extension show --name rdbms-connect &>/dev/null || \
-            az extension add --name rdbms-connect --yes
+          az extension add --name rdbms-connect --upgrade --yes
 
           az sql db query \
             --server "$SQL_SERVER" \
