@@ -25,3 +25,16 @@ export function readStoredDemoProfileId(): string | null {
 export function storeDemoProfileId(profileId: string) {
   if (typeof window !== 'undefined') window.localStorage.setItem(DEMO_PROFILE_STORAGE_KEY, profileId)
 }
+
+const DEMO_SESSION_KEY = 'spotly.demo-session'
+
+/** Whether a demo "login" is active (survives reloads so the demo stays in). */
+export function readDemoSession(): boolean {
+  return typeof window !== 'undefined' && window.localStorage.getItem(DEMO_SESSION_KEY) === '1'
+}
+
+export function storeDemoSession(active: boolean) {
+  if (typeof window === 'undefined') return
+  if (active) window.localStorage.setItem(DEMO_SESSION_KEY, '1')
+  else window.localStorage.removeItem(DEMO_SESSION_KEY)
+}

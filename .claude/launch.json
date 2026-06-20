@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "dev"],
       "port": 5173,
       "cwd": "frontend"
+    },
+    {
+      "name": "spotly-verify",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "5178"],
+      "port": 5178,
+      "cwd": "frontend"
     }
   ]
 }

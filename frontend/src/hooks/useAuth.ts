@@ -2,7 +2,7 @@ import { useAuthStore } from '../store/authStore'
 import type { UserRole } from '../types'
 
 export function useAuth() {
-  const { profile, user, initialized, setInitialized, setUser, setProfileId } = useAuthStore()
+  const { profile, user, initialized, setInitialized, setUser, setProfileId, login, logout } = useAuthStore()
 
   const hasRole = (role: UserRole) => user?.roles.includes(role) ?? false
   const isManager = () => hasRole('Manager') || hasRole('Facility') || hasRole('Admin')
@@ -16,6 +16,8 @@ export function useAuth() {
     setInitialized,
     setUser,
     setProfileId,
+    login,
+    logout,
     hasRole,
     isManager,
     isFacility,
