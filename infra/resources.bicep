@@ -116,12 +116,16 @@ resource dnsBlob 'Microsoft.Network/privateDnsZones@2020-06-01' = {
 }
 
 // VNet links so App Service DNS resolves PE IPs
+// dependsOn: [vnet] is kept explicit: Italy North has shown ARM race conditions
+// even when the dependency is implicitly inferred from vnet.id.
 resource vnetLinkSql 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: dnsSql
   name: 'link-sql'
   location: 'global'
   tags: tags
   properties: { virtualNetwork: { id: vnet.id }, registrationEnabled: false }
+  #disable-next-line no-unnecessary-dependson
+  dependsOn: [vnet]
 }
 resource vnetLinkKv 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: dnsKv
@@ -129,6 +133,8 @@ resource vnetLinkKv 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-
   location: 'global'
   tags: tags
   properties: { virtualNetwork: { id: vnet.id }, registrationEnabled: false }
+  #disable-next-line no-unnecessary-dependson
+  dependsOn: [vnet]
 }
 resource vnetLinkBlob 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: dnsBlob
@@ -136,6 +142,8 @@ resource vnetLinkBlob 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@202
   location: 'global'
   tags: tags
   properties: { virtualNetwork: { id: vnet.id }, registrationEnabled: false }
+  #disable-next-line no-unnecessary-dependson
+  dependsOn: [vnet]
 }
 
 // ── SignalR Free F1 ───────────────────────────────────────────────────────────
@@ -200,42 +208,24 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
 }
 
 // ── Azure SQL (Serverless GP_S_Gen5) ──────────────────────────────────────────
-// publicNetworkAccess: Enabled – POC allows pipeline access; traffic from App
-// Service always uses the Private Endpoint (DNS resolves to 10.1.2.x via VNet).
-resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = if (deploySql) {
+// Uses preview API to set AAD-only auth inline — no SQL credentials required.
+// This is idempotent: ARM updates the administrators object without touching SQL auth.
+resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = if (deploySql) {
   name: sqlServerName
-  location: sqlLocation   // GP_S_Gen5 may be restricted in the main region
+  location: sqlLocation
   tags: tags
   properties: {
-    // SQL auth is disabled below; this placeholder login can never be used.
-    administratorLogin: 'sqladmin-placeholder'
-    // SQL auth is disabled by sqlAadOnlyAuth below; this password is never usable.
-    #disable-next-line use-secure-value-for-secure-inputs
-    administratorLoginPassword: '${uniqueString(resourceGroup().id, sqlServerName)}Spotly-1!'
+    administrators: {
+      administratorType: 'ActiveDirectory'
+      azureADOnlyAuthentication: true
+      login: webApp.name
+      sid: webApp.identity.principalId
+      tenantId: entraTenantId
+    }
     publicNetworkAccess: 'Enabled'
     minimalTlsVersion: '1.2'
     version: '12.0'
   }
-}
-
-// Set App Service Managed Identity as AAD admin
-resource sqlAadAdmin 'Microsoft.Sql/servers/administrators@2023-08-01' = if (deploySql) {
-  parent: sqlServer
-  name: 'ActiveDirectory'
-  properties: {
-    administratorType: 'ActiveDirectory'
-    login: webApp.name
-    sid: webApp.identity.principalId
-    tenantId: entraTenantId
-  }
-}
-
-// Disable SQL authentication – MI only (must be after AAD admin is set)
-resource sqlAadOnlyAuth 'Microsoft.Sql/servers/azureADOnlyAuthentications@2023-08-01' = if (deploySql) {
-  parent: sqlServer
-  name: 'Default'
-  properties: { azureADOnlyAuthentication: true }
-  dependsOn: [sqlAadAdmin]
 }
 
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01' = if (deploySql) {
