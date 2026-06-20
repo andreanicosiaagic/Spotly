@@ -14,7 +14,6 @@ param sqlAdminLogin string = ''
 param sqlAdminObjectId string = ''
 @description('Principal type of the SQL admin: User for interactive, Application for CI/CD.')
 @allowed(['User', 'Group', 'Application'])
-#disable-next-line no-unused-params
 param sqlAdminPrincipalType string = 'Application'
 
 var sqlAdminConfigured = !empty(sqlAdminLogin) && !empty(sqlAdminObjectId)
@@ -208,47 +207,28 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
 }
 
 // ── Azure SQL (Serverless GP_S_Gen5) ──────────────────────────────────────────
-// publicNetworkAccess: Enabled – POC allows pipeline access; traffic from App
-// Service always uses the Private Endpoint (DNS resolves to 10.1.2.x via VNet).
-resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
+// Uses preview API to configure AAD-only auth and Entra admin inline — no SQL
+// credentials ever created. The deploying SP is set as Entra admin so colleagues
+// can be granted access from the portal. Falls back to app identity when no SP
+// credentials are provided. The app's managed identity gets db_datareader/
+// datawriter/ddladmin via the pipeline's "Grant SQL access" step.
+resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: sqlServerName
   location: location
   tags: tags
   properties: {
-    // SQL auth is disabled below; this placeholder login can never be used.
-    administratorLogin: 'sqladmin-placeholder'
-    // SQL auth is disabled by sqlAadOnlyAuth below; this password is never usable.
-    #disable-next-line use-secure-value-for-secure-inputs
-    administratorLoginPassword: '${uniqueString(resourceGroup().id, sqlServerName)}Spotly-1!'
+    administrators: {
+      administratorType: 'ActiveDirectory'
+      azureADOnlyAuthentication: true
+      principalType: sqlAdminConfigured ? sqlAdminPrincipalType : 'ServicePrincipal'
+      login: sqlAdminConfigured ? sqlAdminLogin : webApp.name
+      sid: sqlAdminConfigured ? sqlAdminObjectId : webApp.identity.principalId
+      tenantId: entraTenantId
+    }
     publicNetworkAccess: 'Enabled'
     minimalTlsVersion: '1.2'
     version: '12.0'
   }
-}
-
-// Set Entra admin: use the deploying SP/user when provided (so humans can manage
-// colleagues from the portal). Falls back to the app managed identity for backwards
-// compatibility. The app's identity always gets db_datareader/datawriter/ddladmin
-// via the pipeline's "Grant SQL access" step.
-resource sqlAadAdmin 'Microsoft.Sql/servers/administrators@2023-08-01' = {
-  parent: sqlServer
-  name: 'ActiveDirectory'
-  properties: {
-    administratorType: 'ActiveDirectory'
-    // When deploying SP creds are available, use the SP as admin so colleagues
-    // can be granted access from the portal via Entra. Falls back to app identity.
-    login: sqlAdminConfigured ? sqlAdminLogin : webApp.name
-    sid: sqlAdminConfigured ? sqlAdminObjectId : webApp.identity.principalId
-    tenantId: entraTenantId
-  }
-}
-
-// Disable SQL authentication – MI only (must be after AAD admin is set)
-resource sqlAadOnlyAuth 'Microsoft.Sql/servers/azureADOnlyAuthentications@2023-08-01' = {
-  parent: sqlServer
-  name: 'Default'
-  properties: { azureADOnlyAuthentication: true }
-  dependsOn: [sqlAadAdmin]
 }
 
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01' = {
