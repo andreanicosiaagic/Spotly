@@ -10,8 +10,8 @@ Spotly consente ai dipendenti di organizzare la propria giornata in ufficio da u
 
 | Layer | Tecnologie |
 |---|---|
-| Frontend | React 18 · Vite · TypeScript · Tailwind CSS · Zustand · TanStack Query · SignalR client |
-| Backend | ASP.NET Core 8 Minimal API · SignalR · EF Core InMemory · Serilog |
+| Frontend | React 19 · Vite 8 · TypeScript 6 · Tailwind CSS 4 · Zustand 5 · TanStack Query v5 · SignalR client |
+| Backend | ASP.NET Core 10 (LTS) · C# 14 · SignalR · EF Core 10 InMemory · Serilog v3 |
 | Real-time | SignalR hub (`AvailabilityHub`) + lock ottimistico |
 | Mock | MSW v2 (FE) · InMemory repositories (BE) |
 | Deploy | Azure App Service |

@@ -12,24 +12,24 @@ Spotly è una **POC** (Proof of Concept) per hackathon con scope limitato a sing
 ## Stack obbligatorio
 
 ### Frontend
-- **React 18** — solo functional components + hooks, **mai** class components
-- **TypeScript** — tipizzazione esplicita, no `any` salvo casi eccezionali documentati
-- **Vite** — bundler, non CRA o altri
-- **Tailwind CSS** — utility-first, mobile-first; no CSS-in-JS
-- **Zustand** — state management; no Redux
+- **React 19** (19.2.x) — solo functional components + hooks; nuovi hook utili: `useOptimistic`, `useActionState`
+- **TypeScript 6** — tipizzazione esplicita, no `any` salvo casi eccezionali documentati
+- **Vite 8** — bundler Rolldown (Rust); nessun CRA o altri
+- **Tailwind CSS 4** — CSS-first via `@theme`, plugin `@tailwindcss/vite`; **non** usare `tailwind.config.js`
+- **Zustand 5** — state management; no Redux
 - **TanStack Query v5** — server state, caching, invalidation
-- **React Router v6** — routing SPA
+- **React Router v7** — package `react-router` (non più `react-router-dom`); SPA standard
 - **@microsoft/signalr** — client real-time per aggiornamenti disponibilità
-- **MSW v2** — Mock Service Worker per tutti i mock API in dev/test
+- **MSW v2** (2.14.6) — Mock Service Worker per tutti i mock API in dev/test
 
 ### Backend
-- **ASP.NET Core 8** — Minimal API pattern obbligatorio; no Controller classes
-- **C# 12** — usa `record` types per DTOs, primary constructors, file-scoped namespaces
-- **Microsoft.AspNetCore.SignalR** — hub per disponibilità real-time
-- **EF Core InMemory** — persistenza mock; no database reale in POC
-- **Serilog** — logging strutturato; mai loggare PII di dominio
-- **FluentValidation** — validazione regole di business
-- **xUnit + Moq** — testing
+- **ASP.NET Core 10** (LTS fino Nov 2028) — Minimal API pattern obbligatorio; no Controller classes
+- **C# 14** — usa `record` types per DTOs, primary constructors, file-scoped namespaces
+- **Microsoft.AspNetCore.SignalR** (built-in .NET 10) — hub per disponibilità real-time
+- **EF Core 10 InMemory** — persistenza mock; no database reale in POC
+- **Serilog v3** — logging strutturato; mai loggare PII di dominio
+- **FluentValidation 12** — validazione esplicita negli endpoint (auto-validation rimossa in v12)
+- **xUnit v3 + Moq v4** — testing
 
 ---
 
