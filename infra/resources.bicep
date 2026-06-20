@@ -415,8 +415,9 @@ resource appSettings 'Microsoft.Web/sites/config@2024-11-01' = {
     ApplicationInsightsAgent_EXTENSION_VERSION: '~3'
     // SignalR: MSI auth – no connection-string secret needed
     Azure__SignalR__ConnectionString: 'Endpoint=https://${signalR.properties.hostName};AuthType=azure.msi;Version=1.0;'
-    // SQL: MSI auth via Active Directory Default
-    Azure__Sql__ConnectionString: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Database=SpotlyDB;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;'
+    // SQL: MSI auth via Active Directory Default – provider switches EF Core from InMemory to SqlServer
+    Database__Provider: 'SqlServer'
+    ConnectionStrings__Spotly: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Database=SpotlyDB;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;'
     // Key Vault URI for secret references
     Azure__KeyVault__Uri: keyVault.properties.vaultUri
     // Storage: MSI auth – only account name needed
