@@ -130,6 +130,7 @@ jobs:
           APP_NAME: ${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}
           SQL_SERVER: ${{ steps.infra.outputs.SQL_SERVER }}
           SQL_DATABASE: ${{ steps.infra.outputs.SQL_DATABASE }}
+          AZURE_RESOURCE_GROUP: ${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}
         run: |
           # Install go-sqlcmd: resolve correct asset URL via GitHub API
           DOWNLOAD_URL=$(python3 -c "
@@ -145,6 +146,17 @@ jobs:
           ")
           curl -fsSL "$DOWNLOAD_URL" | sudo tar xj -C /usr/local/bin
           sqlcmd --version
+
+          # Open SQL Server firewall for this runner and close it on exit (even on failure)
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          RULE_NAME="gh-runner-$GITHUB_RUN_ID"
+          az sql server firewall-rule create \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --server "$SQL_SERVER" \
+            --name "$RULE_NAME" \
+            --start-ip-address "$RUNNER_IP" \
+            --end-ip-address "$RUNNER_IP"
+          trap 'az sql server firewall-rule delete --resource-group "$AZURE_RESOURCE_GROUP" --server "$SQL_SERVER" --name "$RULE_NAME" --yes || true' EXIT
 
           # Write grant script (bash expands ${APP_NAME} here)
           cat > /tmp/grant.sql << EOF
@@ -223,6 +235,7 @@ jobs:
           APP_NAME: ${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}
           SQL_SERVER: ${{ steps.infra.outputs.SQL_SERVER }}
           SQL_DATABASE: ${{ steps.infra.outputs.SQL_DATABASE }}
+          AZURE_RESOURCE_GROUP: ${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}
         run: |
           # Install go-sqlcmd: resolve correct asset URL via GitHub API
           DOWNLOAD_URL=$(python3 -c "
@@ -238,6 +251,17 @@ jobs:
           ")
           curl -fsSL "$DOWNLOAD_URL" | sudo tar xj -C /usr/local/bin
           sqlcmd --version
+
+          # Open SQL Server firewall for this runner and close it on exit (even on failure)
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          RULE_NAME="gh-runner-$GITHUB_RUN_ID"
+          az sql server firewall-rule create \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --server "$SQL_SERVER" \
+            --name "$RULE_NAME" \
+            --start-ip-address "$RUNNER_IP" \
+            --end-ip-address "$RUNNER_IP"
+          trap 'az sql server firewall-rule delete --resource-group "$AZURE_RESOURCE_GROUP" --server "$SQL_SERVER" --name "$RULE_NAME" --yes || true' EXIT
 
           # Write grant script (bash expands ${APP_NAME} here)
           cat > /tmp/grant.sql << EOF
@@ -316,6 +340,7 @@ jobs:
           APP_NAME: ${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}
           SQL_SERVER: ${{ steps.infra.outputs.SQL_SERVER }}
           SQL_DATABASE: ${{ steps.infra.outputs.SQL_DATABASE }}
+          AZURE_RESOURCE_GROUP: ${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}
         run: |
           # Install go-sqlcmd: resolve correct asset URL via GitHub API
           DOWNLOAD_URL=$(python3 -c "
@@ -331,6 +356,17 @@ jobs:
           ")
           curl -fsSL "$DOWNLOAD_URL" | sudo tar xj -C /usr/local/bin
           sqlcmd --version
+
+          # Open SQL Server firewall for this runner and close it on exit (even on failure)
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          RULE_NAME="gh-runner-$GITHUB_RUN_ID"
+          az sql server firewall-rule create \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --server "$SQL_SERVER" \
+            --name "$RULE_NAME" \
+            --start-ip-address "$RUNNER_IP" \
+            --end-ip-address "$RUNNER_IP"
+          trap 'az sql server firewall-rule delete --resource-group "$AZURE_RESOURCE_GROUP" --server "$SQL_SERVER" --name "$RULE_NAME" --yes || true' EXIT
 
           # Write grant script (bash expands ${APP_NAME} here)
           cat > /tmp/grant.sql << EOF
