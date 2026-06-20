@@ -116,10 +116,22 @@ jobs:
           SQL_SERVER: ${{ steps.infra.outputs.SQL_SERVER }}
           SQL_DATABASE: ${{ steps.infra.outputs.SQL_DATABASE }}
         run: |
-          LATEST=$(curl -fsSL https://api.github.com/repos/microsoft/go-sqlcmd/releases/latest | jq -r .tag_name)
-          curl -fsSL "https://github.com/microsoft/go-sqlcmd/releases/download/${LATEST}/sqlcmd_linux_amd64.tar.gz" \
-            | sudo tar xz -C /usr/local/bin sqlcmd
+          # Install go-sqlcmd: resolve correct asset URL via GitHub API
+          DOWNLOAD_URL=$(python3 -c "
+          import urllib.request, json
+          req = urllib.request.Request(
+            'https://api.github.com/repos/microsoft/go-sqlcmd/releases/latest',
+            headers={'User-Agent': 'gh-actions'})
+          with urllib.request.urlopen(req) as r:
+            data = json.loads(r.read())
+          assets = [a for a in data['assets']
+                    if 'linux' in a['name'] and 'amd64' in a['name'] and a['name'].endswith('.tar.gz')]
+          print(assets[0]['browser_download_url'])
+          ")
+          curl -fsSL "$DOWNLOAD_URL" | sudo tar xz -C /usr/local/bin
+          sqlcmd --version
 
+          # Write grant script (bash expands ${APP_NAME} here)
           cat > /tmp/grant.sql << EOF
           IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = N'${APP_NAME}')
             EXEC('CREATE USER [${APP_NAME}] FROM EXTERNAL PROVIDER');
@@ -197,10 +209,22 @@ jobs:
           SQL_SERVER: ${{ steps.infra.outputs.SQL_SERVER }}
           SQL_DATABASE: ${{ steps.infra.outputs.SQL_DATABASE }}
         run: |
-          LATEST=$(curl -fsSL https://api.github.com/repos/microsoft/go-sqlcmd/releases/latest | jq -r .tag_name)
-          curl -fsSL "https://github.com/microsoft/go-sqlcmd/releases/download/${LATEST}/sqlcmd_linux_amd64.tar.gz" \
-            | sudo tar xz -C /usr/local/bin sqlcmd
+          # Install go-sqlcmd: resolve correct asset URL via GitHub API
+          DOWNLOAD_URL=$(python3 -c "
+          import urllib.request, json
+          req = urllib.request.Request(
+            'https://api.github.com/repos/microsoft/go-sqlcmd/releases/latest',
+            headers={'User-Agent': 'gh-actions'})
+          with urllib.request.urlopen(req) as r:
+            data = json.loads(r.read())
+          assets = [a for a in data['assets']
+                    if 'linux' in a['name'] and 'amd64' in a['name'] and a['name'].endswith('.tar.gz')]
+          print(assets[0]['browser_download_url'])
+          ")
+          curl -fsSL "$DOWNLOAD_URL" | sudo tar xz -C /usr/local/bin
+          sqlcmd --version
 
+          # Write grant script (bash expands ${APP_NAME} here)
           cat > /tmp/grant.sql << EOF
           IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = N'${APP_NAME}')
             EXEC('CREATE USER [${APP_NAME}] FROM EXTERNAL PROVIDER');
@@ -278,10 +302,22 @@ jobs:
           SQL_SERVER: ${{ steps.infra.outputs.SQL_SERVER }}
           SQL_DATABASE: ${{ steps.infra.outputs.SQL_DATABASE }}
         run: |
-          LATEST=$(curl -fsSL https://api.github.com/repos/microsoft/go-sqlcmd/releases/latest | jq -r .tag_name)
-          curl -fsSL "https://github.com/microsoft/go-sqlcmd/releases/download/${LATEST}/sqlcmd_linux_amd64.tar.gz" \
-            | sudo tar xz -C /usr/local/bin sqlcmd
+          # Install go-sqlcmd: resolve correct asset URL via GitHub API
+          DOWNLOAD_URL=$(python3 -c "
+          import urllib.request, json
+          req = urllib.request.Request(
+            'https://api.github.com/repos/microsoft/go-sqlcmd/releases/latest',
+            headers={'User-Agent': 'gh-actions'})
+          with urllib.request.urlopen(req) as r:
+            data = json.loads(r.read())
+          assets = [a for a in data['assets']
+                    if 'linux' in a['name'] and 'amd64' in a['name'] and a['name'].endswith('.tar.gz')]
+          print(assets[0]['browser_download_url'])
+          ")
+          curl -fsSL "$DOWNLOAD_URL" | sudo tar xz -C /usr/local/bin
+          sqlcmd --version
 
+          # Write grant script (bash expands ${APP_NAME} here)
           cat > /tmp/grant.sql << EOF
           IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = N'${APP_NAME}')
             EXEC('CREATE USER [${APP_NAME}] FROM EXTERNAL PROVIDER');
