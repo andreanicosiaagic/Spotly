@@ -119,7 +119,6 @@ jobs:
           parameters: >-
             environmentName=${{ vars.ENVIRONMENT_NAME || 'black' }}
             entraTenantId=${{ secrets.ENTRA_TENANT_ID }}
-            entraClientId=${{ secrets.ENTRA_CLIENT_ID }}
             sqlAdminLogin=${{ steps.sp.outputs.display_name }}
             sqlAdminObjectId=${{ steps.sp.outputs.object_id }}
             sqlAdminPrincipalType=Application
@@ -131,7 +130,8 @@ jobs:
             --resource-group "${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}" \
             --name "${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}" \
             --src-path deploy.zip \
-            --type zip
+            --type zip \
+            --async true
 
   # ── Deploy – Staging (manual, requires approval) ──────────────────────────
   deploy-staging:
@@ -171,7 +171,6 @@ jobs:
           parameters: >-
             environmentName=${{ vars.ENVIRONMENT_NAME || 'black-stg' }}
             entraTenantId=${{ secrets.ENTRA_TENANT_ID }}
-            entraClientId=${{ secrets.ENTRA_CLIENT_ID }}
             sqlAdminLogin=${{ steps.sp.outputs.display_name }}
             sqlAdminObjectId=${{ steps.sp.outputs.object_id }}
             sqlAdminPrincipalType=Application
@@ -183,7 +182,8 @@ jobs:
             --resource-group "${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}" \
             --name "${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}" \
             --src-path deploy.zip \
-            --type zip
+            --type zip \
+            --async true
 
   # ── Deploy – Production (manual, requires approval) ───────────────────────
   deploy-production:
@@ -223,7 +223,6 @@ jobs:
           parameters: >-
             environmentName=${{ vars.ENVIRONMENT_NAME || 'black-prod' }}
             entraTenantId=${{ secrets.ENTRA_TENANT_ID }}
-            entraClientId=${{ secrets.ENTRA_CLIENT_ID }}
             sqlAdminLogin=${{ steps.sp.outputs.display_name }}
             sqlAdminObjectId=${{ steps.sp.outputs.object_id }}
             sqlAdminPrincipalType=Application
@@ -235,5 +234,6 @@ jobs:
             --resource-group "${{ steps.infra.outputs.AZURE_RESOURCE_GROUP }}" \
             --name "${{ steps.infra.outputs.SERVICE_API_RESOURCE_NAME }}" \
             --src-path deploy.zip \
-            --type zip
+            --type zip \
+            --async true
 
