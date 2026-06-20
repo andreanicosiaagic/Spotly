@@ -4,6 +4,14 @@ metadata:
 infra:
   provider: bicep
   path: infra
+hooks:
+  postprovision:
+    posix:
+      shell: sh
+      run: ./scripts/grant-and-migrate.sh
+    windows:
+      shell: pwsh
+      run: ./scripts/grant-and-migrate.ps1
 services:
   api:
     project: ./backend/Spotly.Api

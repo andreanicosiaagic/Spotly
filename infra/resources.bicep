@@ -10,6 +10,13 @@ param entraTenantId string
 param entraClientId string
 param allowedOrigin string
 param appServicePlanSku string
+@description('UPN or display name of the Entra user/group that will be SQL Server admin (e.g. nicola.desanti@agic.it).')
+param sqlAdminLogin string
+@description('Object ID of the Entra principal set as SQL admin.')
+param sqlAdminObjectId string
+@description('Principal type of the SQL admin: User for interactive deploys, Application for CI/CD.')
+@allowed(['User', 'Group', 'Application'])
+param sqlAdminPrincipalType string = 'User'
 
 // ── Name variables ────────────────────────────────────────────────────────────
 var apiServiceName           = 'api'
@@ -210,6 +217,9 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
 // ── Azure SQL (Serverless GP_S_Gen5) ──────────────────────────────────────────
 // Uses preview API to set AAD-only auth inline — no SQL credentials required.
 // This is idempotent: ARM updates the administrators object without touching SQL auth.
+// SQL Server: Entra admin is the deploying user/group so that humans can manage
+// colleagues' access from the portal. The app's managed identity is granted
+// db_datareader/datawriter/ddladmin via the postprovision hook (scripts/grant-and-migrate.ps1).
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = if (deploySql) {
   name: sqlServerName
   location: sqlLocation
@@ -218,8 +228,9 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = if (deploySql) {
     administrators: {
       administratorType: 'ActiveDirectory'
       azureADOnlyAuthentication: true
-      login: webApp.name
-      sid: webApp.identity.principalId
+      principalType: sqlAdminPrincipalType
+      login: sqlAdminLogin
+      sid: sqlAdminObjectId
       tenantId: entraTenantId
     }
     publicNetworkAccess: 'Enabled'
@@ -500,5 +511,7 @@ output apiName string = webApp.name
 output apiUri string = 'https://${webApp.properties.defaultHostName}'
 output applicationInsightsConnectionString string = applicationInsights.properties.ConnectionString
 output sqlServerFqdn string = deploySql ? any(sqlServer).properties.fullyQualifiedDomainName : ''
+output sqlServerName string = deploySql ? sqlServerName : ''
+output sqlDatabaseName string = deploySql ? 'SpotlyDB' : ''
 output keyVaultUri string = keyVault.properties.vaultUri
 output storageAccountName string = storageAccount.name

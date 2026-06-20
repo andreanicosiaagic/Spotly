@@ -13,6 +13,15 @@
     },
     "entraClientId": {
       "value": "${ENTRA_CLIENT_ID}"
+    },
+    "sqlAdminLogin": {
+      "value": "${SQL_ADMIN_LOGIN}"
+    },
+    "sqlAdminObjectId": {
+      "value": "${SQL_ADMIN_OBJECT_ID}"
+    },
+    "sqlAdminPrincipalType": {
+      "value": "${SQL_ADMIN_PRINCIPAL_TYPE}"
     }
   }
 }
