@@ -8,6 +8,15 @@ param entraTenantId string = subscription().tenantId
 param entraClientId string = ''
 param allowedOrigin string
 param appServicePlanSku string
+@description('UPN or display name of the Entra principal that will be SQL Server admin. When empty, falls back to the app managed identity.')
+param sqlAdminLogin string = ''
+@description('Object ID of the Entra principal set as SQL admin. When empty, falls back to the app managed identity.')
+param sqlAdminObjectId string = ''
+@description('Principal type of the SQL admin: User for interactive, Application for CI/CD.')
+@allowed(['User', 'Group', 'Application'])
+param sqlAdminPrincipalType string = 'Application'
+
+var sqlAdminConfigured = !empty(sqlAdminLogin) && !empty(sqlAdminObjectId)
 
 // ── Name variables ────────────────────────────────────────────────────────────
 var apiServiceName           = 'api'
@@ -216,14 +225,17 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
   }
 }
 
-// Set App Service Managed Identity as AAD admin
+// Set Entra admin: use the deploying SP/user when provided (so humans can manage
+// colleagues from the portal). Falls back to the app managed identity for backwards
+// compatibility. The app's identity always gets db_datareader/datawriter/ddladmin
+// via the pipeline's "Grant SQL access" step.
 resource sqlAadAdmin 'Microsoft.Sql/servers/administrators@2023-08-01' = {
   parent: sqlServer
   name: 'ActiveDirectory'
   properties: {
     administratorType: 'ActiveDirectory'
-    login: webApp.name
-    sid: webApp.identity.principalId
+    login: sqlAdminConfigured ? sqlAdminLogin : webApp.name
+    sid: sqlAdminConfigured ? sqlAdminObjectId : webApp.identity.principalId
     tenantId: entraTenantId
   }
 }
@@ -508,5 +520,7 @@ output apiName string = webApp.name
 output apiUri string = 'https://${webApp.properties.defaultHostName}'
 output applicationInsightsConnectionString string = applicationInsights.properties.ConnectionString
 output sqlServerFqdn string = sqlServer.properties.fullyQualifiedDomainName
+output sqlServerName string = sqlServer.name
+output sqlDatabaseName string = sqlDatabase.name
 output keyVaultUri string = keyVault.properties.vaultUri
 output storageAccountName string = storageAccount.name
