@@ -1,56 +1,39 @@
 import { NavLink } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
+import { AppIcon } from './AppIcon'
+
+const navigation = [
+  { to: '/', label: 'Oggi', icon: 'home' },
+  { to: '/parking', label: 'Parcheggio', icon: 'directions_car' },
+  { to: '/desk', label: 'Postazioni', icon: 'chair' },
+  { to: '/lunch', label: 'Pranzo', icon: 'restaurant' },
+]
 
 export function Navbar() {
   const { user } = useAuth()
-
-  return (
-    <nav className="bg-white border-b border-border sticky top-0 z-50">
-      <div className="max-w-2xl mx-auto px-4 flex items-center justify-between h-14">
-        <NavLink to="/" className="flex items-center gap-2 font-semibold text-primary text-lg select-none">
-          <span className="text-2xl">🅿</span>
-          <span>Spotly</span>
-        </NavLink>
-
-        <div className="flex items-center gap-1">
-          <NavLink
-            to="/parking"
-            className={({ isActive }) =>
-              `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                isActive ? 'bg-primary text-white' : 'text-text-muted hover:bg-surface-alt'
-              }`
-            }
-          >
-            🚗 Parcheggio
-          </NavLink>
-          <NavLink
-            to="/desk"
-            className={({ isActive }) =>
-              `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                isActive ? 'bg-primary text-white' : 'text-text-muted hover:bg-surface-alt'
-              }`
-            }
-          >
-            💼 Postazione
-          </NavLink>
-          <NavLink
-            to="/lunch"
-            className={({ isActive }) =>
-              `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                isActive ? 'bg-primary text-white' : 'text-text-muted hover:bg-surface-alt'
-              }`
-            }
-          >
-            🍽 Pranzo
-          </NavLink>
-        </div>
-
-        {user && (
-          <div className="text-xs text-text-muted hidden sm:block">
-            {user.name} · <span className="text-primary font-medium">{user.roles[0]}</span>
-          </div>
-        )}
+  const initials = user?.name.split(' ').map(part => part[0]).slice(0, 2).join('') ?? 'SP'
+  return <>
+    <aside className="desktop-sidebar">
+      <NavLink to="/" className="brand-lockup"><img src="/spotly-logo.png" alt="Spotly" /></NavLink>
+      <nav className="sidebar-nav" aria-label="Navigazione principale">
+        {navigation.map(item => <NavItem key={item.to} {...item} />)}
+      </nav>
+      <div className="sidebar-user">
+        <div className="avatar">{initials}</div><div><strong>{user?.name}</strong><span>{user?.roles[0]} · Team Product</span></div>
       </div>
+    </aside>
+    <header className="mobile-header">
+      <NavLink to="/" className="mobile-brand"><img src="/spotly-logo.png" alt="Spotly" /></NavLink>
+      <div className="avatar">{initials}</div>
+    </header>
+    <nav className="mobile-bottom-nav" aria-label="Navigazione principale">
+      {navigation.map(item => <NavItem key={item.to} {...item} />)}
     </nav>
-  )
+  </>
+}
+
+function NavItem({ to, label, icon }: { to: string; label: string; icon: string }) {
+  return <NavLink to={to} end={to === '/'} className={({ isActive }) => `app-nav-item ${isActive ? 'app-nav-item-active' : ''}`}>
+    <AppIcon name={icon} filled /><span>{label}</span>
+  </NavLink>
 }
