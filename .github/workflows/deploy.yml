@@ -87,7 +87,7 @@ jobs:
           region: italynorth
           template: ./infra/main.bicep
           parameters: >-
-            environmentName=${{ vars.ENVIRONMENT_NAME }}
+            environmentName=${{ vars.ENVIRONMENT_NAME || 'black' }}
             entraTenantId=${{ secrets.ENTRA_TENANT_ID }}
             entraClientId=${{ secrets.ENTRA_CLIENT_ID }}
 
@@ -126,7 +126,7 @@ jobs:
           region: italynorth
           template: ./infra/main.bicep
           parameters: >-
-            environmentName=${{ vars.ENVIRONMENT_NAME }}
+            environmentName=${{ vars.ENVIRONMENT_NAME || 'black-stg' }}
             entraTenantId=${{ secrets.ENTRA_TENANT_ID }}
             entraClientId=${{ secrets.ENTRA_CLIENT_ID }}
 
@@ -165,7 +165,7 @@ jobs:
           region: italynorth
           template: ./infra/main.bicep
           parameters: >-
-            environmentName=${{ vars.ENVIRONMENT_NAME }}
+            environmentName=${{ vars.ENVIRONMENT_NAME || 'black-prod' }}
             entraTenantId=${{ secrets.ENTRA_TENANT_ID }}
             entraClientId=${{ secrets.ENTRA_CLIENT_ID }}
 
