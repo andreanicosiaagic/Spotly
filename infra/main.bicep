@@ -2,7 +2,7 @@ targetScope = 'subscription'
 
 @minLength(1)
 param environmentName string
-param location string = 'westeurope'
+param location string = 'northeurope'
 @description('Microsoft Entra tenant that issues Spotly identities.')
 param entraTenantId string
 @description('App registration client ID configured with Spotly app roles.')

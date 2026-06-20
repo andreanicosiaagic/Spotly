@@ -20,7 +20,7 @@ var vnetName                 = '${namePrefix}-vnet-${suffix}'
 
 // Well-known Azure RBAC role definition IDs
 var signalRAppServerRoleId      = '420fcaa2-552c-430f-98ca-3264be4806c7'
-var kvSecretsUserRoleId         = '4633458b-17de-408a-b874-0445c86b69e0'
+var kvSecretsUserRoleId         = '4633458b-17de-408a-b874-0445c86b69e6'
 var storageBlobContribRoleId    = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 
 // ── Log Analytics ─────────────────────────────────────────────────────────────
