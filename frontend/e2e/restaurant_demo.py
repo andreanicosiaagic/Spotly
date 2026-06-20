@@ -11,24 +11,24 @@ with sync_playwright() as playwright:
     # This page intentionally polls every three seconds in demo mode, so networkidle is unreachable.
     page.wait_for_load_state("load")
 
-    page.get_by_role("heading", name="Posti comunicati dai locali").wait_for()
-    bistrot = page.get_by_role("article").filter(has_text="Bistrot Verde")
-    initial_seats = int(bistrot.locator("strong").inner_text())
+    page.get_by_role("heading", name="Pranzo", exact=True).wait_for()
+    bistrot = page.get_by_role("button").filter(has_text="Bistrot Verde")
+    initial_seats = int(bistrot.locator("strong").inner_text().split()[0])
 
-    page.get_by_role("button", name="Ricevi aggiornamenti demo").click()
+    page.get_by_role("button", name="Aggiornamento demo").click()
     page.wait_for_function(
-        "([selector, initial]) => Number(document.querySelector(selector)?.textContent) !== initial",
-        arg=["article strong", initial_seats],
+        "initial => { const card = [...document.querySelectorAll('button')].find(el => el.textContent.includes('Bistrot Verde')); return Number(card?.querySelector('strong')?.textContent.split(' ')[0]) !== initial; }",
+        arg=initial_seats,
     )
-    updated_seats = int(bistrot.locator("strong").inner_text())
+    updated_seats = int(bistrot.locator("strong").inner_text().split()[0])
     assert updated_seats != initial_seats
-    page.get_by_text("disponibilità aggiornata", exact=False).first.wait_for()
+    page.get_by_text("posti aggiornati", exact=False).first.wait_for()
 
-    bistrot.get_by_role("button", name="Prenota 1 posto").click()
+    bistrot.click()
     confirmation = page.get_by_role("status")
-    confirmation.get_by_text("Conferma locale · OK").wait_for()
+    confirmation.get_by_text("Prenotazione confermata").wait_for()
     assert "Restano" in confirmation.inner_text()
-    assert int(bistrot.locator("strong").inner_text()) == updated_seats - 1
+    assert int(bistrot.locator("strong").inner_text().split()[0]) == updated_seats - 1
 
     page.screenshot(path=str(Path(gettempdir()) / "spotly-restaurant-demo.png"), full_page=True)
     browser.close()

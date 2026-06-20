@@ -1,13 +1,26 @@
-import { Outlet } from 'react-router'
+import { Outlet, useLocation } from 'react-router'
 import { Navbar } from './Navbar'
+import { DateStrip } from './DateStrip'
+
+const pageMeta: Record<string, { title: string; subtitle: string }> = {
+  '/': { title: 'La mia giornata', subtitle: 'Organizza la tua presenza in ufficio' },
+  '/parking': { title: 'Parcheggio', subtitle: 'Scegli un posto disponibile' },
+  '/desk': { title: 'Postazioni', subtitle: 'Trova la postazione giusta per te' },
+  '/lunch': { title: 'Pranzo', subtitle: 'Prenota un locale o scegli un lunch box' },
+}
 
 export function Layout() {
-  return (
-    <div className="min-h-screen bg-surface-alt">
-      <Navbar />
-      <main className="max-w-2xl mx-auto px-4 py-6">
+  const location = useLocation()
+  const meta = pageMeta[location.pathname] ?? pageMeta['/']
+  return <div className="app-shell">
+    <Navbar />
+    <main className="app-main">
+      <div className="app-content">
+        <div className="desktop-page-header">
+          <div><h1>{meta.title}</h1><p>{meta.subtitle}</p></div><DateStrip />
+        </div>
         <Outlet />
-      </main>
-    </div>
-  )
+      </div>
+    </main>
+  </div>
 }
