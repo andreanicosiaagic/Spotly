@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Text.Json;
@@ -8,6 +9,7 @@ using Serilog;
 using Spotly.Api.Auth;
 using Spotly.Api.Endpoints;
 using Spotly.Api.Hubs;
+using Spotly.Api.Infrastructure;
 using Spotly.Api.Services;
 using Spotly.Domain.Interfaces;
 using Spotly.Infrastructure.Integrations;
@@ -41,15 +43,25 @@ try
     if (!string.IsNullOrWhiteSpace(signalRConnection)) signalR.AddAzureSignalR(signalRConnection);
 
     var databaseProvider = builder.Configuration["Database:Provider"] ?? "InMemory";
+
     builder.Services.AddDbContextFactory<SpotlyDbContext>(options =>
     {
         if (databaseProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
         {
             var connectionString = builder.Configuration.GetConnectionString("Spotly")
-                ?? throw new InvalidOperationException("ConnectionStrings:Spotly is required when Database:Provider=SqlServer.");
-            options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure(3));
+                ?? throw new InvalidOperationException("ConnectionStrings:Spotly è richiesta quando Database:Provider=SqlServer.");
+            // In dev, bypass the full DefaultAzureCredential chain (Managed Identity etc.) che va in timeout
+            SqlAuthenticationProvider.SetProvider(
+                SqlAuthenticationMethod.ActiveDirectoryDefault,
+                new DevSqlAuthProvider());
+            options.UseSqlServer(connectionString);
+            Log.Information("Database: Azure SQL Server (Authentication=Active Directory Default)");
         }
-        else options.UseInMemoryDatabase(builder.Configuration["Database:Name"] ?? "spotly-poc");
+        else
+        {
+            options.UseInMemoryDatabase(builder.Configuration["Database:Name"] ?? "spotly-poc");
+            Log.Information("Database: InMemory — per usare Azure SQL imposta Database__Provider=SqlServer");
+        }
     });
     builder.Services.AddSingleton<IParkingRepository, InMemoryParkingRepository>();
     builder.Services.AddSingleton<IDeskRepository, InMemoryDeskRepository>();
@@ -85,8 +97,17 @@ try
     {
         var db = scope.ServiceProvider.GetRequiredService<SpotlyDbContext>();
         var officeTime = scope.ServiceProvider.GetRequiredService<OfficeTime>();
-        await db.Database.EnsureCreatedAsync();
-        await SpotlyDbSeeder.SeedAsync(db, officeTime.Today);
+        if (databaseProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+        {
+            using var migrationCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            await db.Database.MigrateAsync(migrationCts.Token);
+            Log.Information("Database: migrazione completata");
+        }
+        else
+        {
+            await db.Database.EnsureCreatedAsync();
+            await SpotlyDbSeeder.SeedAsync(db, officeTime.Today);
+        }
     }
 
     app.UseExceptionHandler();

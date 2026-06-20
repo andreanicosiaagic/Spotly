@@ -1,24 +1,13 @@
 targetScope = 'resourceGroup'
 
 param location string
-param sqlLocation string
-param deploySql bool
 param namePrefix string
 param suffix string
 param tags object
-param entraTenantId string
-param entraClientId string
+param entraTenantId string = subscription().tenantId
+param entraClientId string = ''
 param allowedOrigin string
 param appServicePlanSku string
-@description('UPN or display name of the Entra principal that will be SQL Server admin. Leave empty to skip Entra admin configuration (admin can be set manually from the portal).')
-param sqlAdminLogin string = ''
-@description('Object ID of the Entra principal set as SQL admin. Leave empty to skip.')
-param sqlAdminObjectId string = ''
-@description('Principal type of the SQL admin: User for interactive deploys, Application for CI/CD.')
-@allowed(['User', 'Group', 'Application'])
-param sqlAdminPrincipalType string = 'User'
-
-var sqlAdminConfigured = !empty(sqlAdminLogin) && !empty(sqlAdminObjectId)
 
 // ── Name variables ────────────────────────────────────────────────────────────
 var apiServiceName           = 'api'
@@ -125,16 +114,12 @@ resource dnsBlob 'Microsoft.Network/privateDnsZones@2020-06-01' = {
 }
 
 // VNet links so App Service DNS resolves PE IPs
-// dependsOn: [vnet] is kept explicit: Italy North has shown ARM race conditions
-// even when the dependency is implicitly inferred from vnet.id.
 resource vnetLinkSql 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: dnsSql
   name: 'link-sql'
   location: 'global'
   tags: tags
   properties: { virtualNetwork: { id: vnet.id }, registrationEnabled: false }
-  #disable-next-line no-unnecessary-dependson
-  dependsOn: [vnet]
 }
 resource vnetLinkKv 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: dnsKv
@@ -142,8 +127,6 @@ resource vnetLinkKv 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-
   location: 'global'
   tags: tags
   properties: { virtualNetwork: { id: vnet.id }, registrationEnabled: false }
-  #disable-next-line no-unnecessary-dependson
-  dependsOn: [vnet]
 }
 resource vnetLinkBlob 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: dnsBlob
@@ -151,8 +134,6 @@ resource vnetLinkBlob 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@202
   location: 'global'
   tags: tags
   properties: { virtualNetwork: { id: vnet.id }, registrationEnabled: false }
-  #disable-next-line no-unnecessary-dependson
-  dependsOn: [vnet]
 }
 
 // ── SignalR Free F1 ───────────────────────────────────────────────────────────
@@ -217,36 +198,48 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
 }
 
 // ── Azure SQL (Serverless GP_S_Gen5) ──────────────────────────────────────────
-// Uses preview API to set AAD-only auth inline — no SQL credentials required.
-// This is idempotent: ARM updates the administrators object without touching SQL auth.
-// SQL Server: when sqlAdminLogin+objectId are provided, the deploying identity
-// (user or CI/CD SP) is set as Entra admin so it can grant colleagues access from
-// the portal. The app's managed identity gets db_datareader/datawriter/ddladmin
-// via the postprovision hook. When empty, no Entra admin is configured by Bicep
-// (can be set manually from the portal afterwards).
-resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = if (deploySql) {
+// publicNetworkAccess: Enabled – POC allows pipeline access; traffic from App
+// Service always uses the Private Endpoint (DNS resolves to 10.1.2.x via VNet).
+resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
   name: sqlServerName
-  location: sqlLocation
+  location: location
   tags: tags
   properties: {
-    administrators: sqlAdminConfigured ? {
-      administratorType: 'ActiveDirectory'
-      azureADOnlyAuthentication: true
-      principalType: sqlAdminPrincipalType
-      login: sqlAdminLogin
-      sid: sqlAdminObjectId
-      tenantId: entraTenantId
-    } : null
+    // SQL auth is disabled below; this placeholder login can never be used.
+    administratorLogin: 'sqladmin-placeholder'
+    // SQL auth is disabled by sqlAadOnlyAuth below; this password is never usable.
+    #disable-next-line use-secure-value-for-secure-inputs
+    administratorLoginPassword: '${uniqueString(resourceGroup().id, sqlServerName)}Spotly-1!'
     publicNetworkAccess: 'Enabled'
     minimalTlsVersion: '1.2'
     version: '12.0'
   }
 }
 
-resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01' = if (deploySql) {
+// Set App Service Managed Identity as AAD admin
+resource sqlAadAdmin 'Microsoft.Sql/servers/administrators@2023-08-01' = {
+  parent: sqlServer
+  name: 'ActiveDirectory'
+  properties: {
+    administratorType: 'ActiveDirectory'
+    login: webApp.name
+    sid: webApp.identity.principalId
+    tenantId: entraTenantId
+  }
+}
+
+// Disable SQL authentication – MI only (must be after AAD admin is set)
+resource sqlAadOnlyAuth 'Microsoft.Sql/servers/azureADOnlyAuthentications@2023-08-01' = {
+  parent: sqlServer
+  name: 'Default'
+  properties: { azureADOnlyAuthentication: true }
+  dependsOn: [sqlAadAdmin]
+}
+
+resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01' = {
   parent: sqlServer
   name: 'SpotlyDB'
-  location: sqlLocation
+  location: location
   tags: tags
   sku: {
     name: 'GP_S_Gen5_1'
@@ -318,7 +311,7 @@ resource floorPlansContainer 'Microsoft.Storage/storageAccounts/blobServices/con
 }
 
 // ── Private Endpoints (snet-pe) ───────────────────────────────────────────────
-resource peSql 'Microsoft.Network/privateEndpoints@2023-11-01' = if (deploySql) {
+resource peSql 'Microsoft.Network/privateEndpoints@2023-11-01' = {
   name: '${namePrefix}-pe-sql-${suffix}'
   location: location
   tags: tags
@@ -373,7 +366,7 @@ resource peStorage 'Microsoft.Network/privateEndpoints@2023-11-01' = {
 }
 
 // DNS Zone Groups – auto-populate private DNS when PE is provisioned
-resource peSqlDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = if (deploySql) {
+resource peSqlDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
   parent: peSql
   name: 'default'
   properties: {
@@ -423,8 +416,8 @@ resource appSettings 'Microsoft.Web/sites/config@2024-11-01' = {
     // SignalR: MSI auth – no connection-string secret needed
     Azure__SignalR__ConnectionString: 'Endpoint=https://${signalR.properties.hostName};AuthType=azure.msi;Version=1.0;'
     // SQL: MSI auth via Active Directory Default – provider switches EF Core from InMemory to SqlServer
-    Database__Provider: deploySql ? 'SqlServer' : 'InMemory'
-    ConnectionStrings__Spotly: deploySql ? 'Server=tcp:${any(sqlServer).properties.fullyQualifiedDomainName},1433;Database=SpotlyDB;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;' : ''
+    Database__Provider: 'SqlServer'
+    ConnectionStrings__Spotly: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Database=SpotlyDB;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;'
     // Key Vault URI for secret references
     Azure__KeyVault__Uri: keyVault.properties.vaultUri
     // Storage: MSI auth – only account name needed
@@ -432,8 +425,6 @@ resource appSettings 'Microsoft.Web/sites/config@2024-11-01' = {
     Azure__Storage__ContainerName: 'floor-plans'
     Booking__CheckInCutoffUtc: '09:30'
     Cors__AllowedOrigins__0: effectiveOrigin
-    SCM_DO_BUILD_DURING_DEPLOYMENT: 'false'
-    ENABLE_ORYX_BUILD: 'false'
   }
 }
 
@@ -472,7 +463,9 @@ resource storageBlobContribRole 'Microsoft.Authorization/roleAssignments@2022-04
 }
 
 // ── Auth Settings (Entra ID Easy Auth) ────────────────────────────────────────
-resource authSettings 'Microsoft.Web/sites/config@2024-11-01' = {
+// Only deployed when an app registration client ID is provided.
+// Leave entraClientId empty (default) to skip Easy Auth and use the mock auth handler.
+resource authSettings 'Microsoft.Web/sites/config@2024-11-01' = if (!empty(entraClientId)) {
   parent: webApp
   name: 'authsettingsV2'
   properties: {
@@ -514,8 +507,6 @@ resource authSettings 'Microsoft.Web/sites/config@2024-11-01' = {
 output apiName string = webApp.name
 output apiUri string = 'https://${webApp.properties.defaultHostName}'
 output applicationInsightsConnectionString string = applicationInsights.properties.ConnectionString
-output sqlServerFqdn string = deploySql ? any(sqlServer).properties.fullyQualifiedDomainName : ''
-output sqlServerName string = deploySql ? sqlServerName : ''
-output sqlDatabaseName string = deploySql ? 'SpotlyDB' : ''
+output sqlServerFqdn string = sqlServer.properties.fullyQualifiedDomainName
 output keyVaultUri string = keyVault.properties.vaultUri
 output storageAccountName string = storageAccount.name
