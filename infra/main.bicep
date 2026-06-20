@@ -2,9 +2,9 @@ targetScope = 'subscription'
 
 @minLength(1)
 param environmentName string
-param location string = 'westeurope'
+param location string = 'italynorth'
 @description('Region for Azure SQL (GP_S_Gen5 may be restricted in some subscriptions).')
-param sqlLocation string = 'northeurope'
+param sqlLocation string = 'italynorth'
 @description('Set to false to skip SQL Server/DB when the subscription has no SQL quota.')
 param deploySql bool = true
 @description('Microsoft Entra tenant that issues Spotly identities.')
