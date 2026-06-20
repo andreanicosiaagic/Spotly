@@ -18,7 +18,7 @@ Il backend di Spotly usa il seguente stack:
 | Linguaggio | **C#** | **14** (con .NET 10) | — | Primary constructors, record types, collection expressions |
 | API Style | **Minimal API** | built-in .NET 10 | Controller-based | Meno boilerplate, più leggibile, adatto a POC |
 | Real-time | **SignalR** | built-in .NET 10 | Socket.io, SSE | Integrato nel runtime, hub tipizzato |
-| Persistenza POC | **EF Core InMemory** | **10.x** | SQLite, PostgreSQL | Zero setup, seed semplice, sostituibile con provider reale |
+| Persistenza | **Azure SQL** (EF Core relational) | **10.x** | EF Core InMemory, SQLite | Requisito architettura POC; Private Endpoint; Managed Identity |
 | Logging | **Serilog** | **v3.x** | NLog, built-in | Structured logging, sink Application Insights (.NET 10 ✅) |
 | Validazione | **FluentValidation** | **12.x** (12.1.0) | DataAnnotations | Regole complesse (R-01..R-09), testabili isolatamente |
 | Testing | **xUnit v3 + Moq** | xUnit **3.2.2** · Moq **v4.x** | NUnit, FakeItEasy | xUnit v3 è la versione corrente; v2 non più mantenuto |
@@ -55,10 +55,21 @@ app.MapPost("/api/bookings", async (CreateBookingRequest req, IValidator<CreateB
 - `Serilog.Sinks.XUnit` non supporta ancora ufficialmente v3 — usare console sink in test
 - API per test async migliorata: `await Assert.ThrowsAsync<>()`
 
-### EF Core 10 InMemory
-- Richiede .NET 10 (non gira su .NET 8/9)
-- Package: `Microsoft.EntityFrameworkCore.InMemory` versione 10.x
-- Nuove feature (non necessarie per POC): vector search, native JSON columns
+### EF Core 10 con Azure SQL (provider relational)
+- EF Core 10 usa il provider SQL Server standard: `Microsoft.EntityFrameworkCore.SqlServer` v10.x
+- **Managed Identity** — nessuna password in connection string; usa `Authentication=Active Directory Default`
+- Package aggiuntivo: `Azure.Identity` per il token provider MI
+- **Non** usare `Microsoft.EntityFrameworkCore.InMemory` — riservato ai soli test unitari dell'Infrastructure layer
+
+```csharp
+// Program.cs
+builder.Services.AddDbContext<SpotlyDbContext>(opts =>
+    opts.UseSqlServer(builder.Configuration.GetConnectionString("SpotlyDb"),
+        sql => sql.EnableRetryOnFailure(3)));
+
+// Connection string in appsettings.json (senza password — MI gestisce auth)
+// "Server=spotly-poc-xxxxx.database.windows.net;Database=SpotlyDB;Authentication=Active Directory Default;"
+```
 
 ## Struttura soluzione
 
@@ -66,7 +77,7 @@ app.MapPost("/api/bookings", async (CreateBookingRequest req, IValidator<CreateB
 Spotly.sln
 ├── Spotly.Api/           ← Program.cs (net10.0), endpoint groups, SignalR hubs
 ├── Spotly.Domain/        ← Entities, value objects, repository interfaces, business rules
-├── Spotly.Infrastructure/← InMemory repos, mock integrations (SSO, Graph, badge)
+├── Spotly.Infrastructure/← EF Core 10 + Azure SQL (SqlServer provider), mock integrations (Graph, badge, welfare)
 └── Spotly.Tests/         ← xUnit v3 unit + integration tests
 ```
 
