@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Spotly.Api/Spotly.Api.csproj" />
+  <Project Path="Spotly.Domain/Spotly.Domain.csproj" />
+  <Project Path="Spotly.Infrastructure/Spotly.Infrastructure.csproj" />
+  <Project Path="Spotly.Tests/Spotly.Tests.csproj" />
+</Solution>
