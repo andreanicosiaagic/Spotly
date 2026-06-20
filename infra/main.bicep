@@ -12,7 +12,7 @@ param appServicePlanSku string = 'B2'
 
 var normalizedEnvironment = toLower(replace(environmentName, '-', ''))
 var suffix = uniqueString(subscription().id, environmentName, location)
-var resourceGroupName = 'rg-spotly-${environmentName}'
+var resourceGroupName = 'rg-${environmentName}'
 var tags = {
   application: 'spotly'
   environment: environmentName
