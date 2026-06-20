@@ -1,6 +1,7 @@
 targetScope = 'resourceGroup'
 
 param location string
+param sqlLocation string
 param namePrefix string
 param suffix string
 param tags object
@@ -202,7 +203,7 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
 // Service always uses the Private Endpoint (DNS resolves to 10.1.2.x via VNet).
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
   name: sqlServerName
-  location: location
+  location: sqlLocation   // GP_S_Gen5 may be restricted in the main region
   tags: tags
   properties: {
     // SQL auth is disabled below; this placeholder login can never be used.
@@ -239,7 +240,7 @@ resource sqlAadOnlyAuth 'Microsoft.Sql/servers/azureADOnlyAuthentications@2023-0
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01' = {
   parent: sqlServer
   name: 'SpotlyDB'
-  location: location
+  location: sqlLocation
   tags: tags
   sku: {
     name: 'GP_S_Gen5_1'

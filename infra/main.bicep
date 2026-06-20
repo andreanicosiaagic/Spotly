@@ -2,7 +2,9 @@ targetScope = 'subscription'
 
 @minLength(1)
 param environmentName string
-param location string = 'northeurope'
+param location string = 'westeurope'
+@description('Region for Azure SQL (GP_S_Gen5 may be restricted in some regions).')
+param sqlLocation string = 'northeurope'
 @description('Microsoft Entra tenant that issues Spotly identities.')
 param entraTenantId string
 @description('App registration client ID configured with Spotly app roles.')
@@ -31,6 +33,7 @@ module resources 'resources.bicep' = {
   scope: resourceGroup
   params: {
     location: location
+    sqlLocation: sqlLocation
     namePrefix: 'spotly-${take(normalizedEnvironment, 12)}'
     suffix: suffix
     tags: tags
