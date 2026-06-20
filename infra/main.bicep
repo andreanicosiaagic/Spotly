@@ -2,7 +2,11 @@ targetScope = 'subscription'
 
 @minLength(1)
 param environmentName string
-param location string = 'northeurope'
+param location string = 'italynorth'
+@description('Region for Azure SQL (GP_S_Gen5 may be restricted in some subscriptions).')
+param sqlLocation string = 'italynorth'
+@description('Set to false to skip SQL Server/DB when the subscription has no SQL quota.')
+param deploySql bool = true
 @description('Microsoft Entra tenant that issues Spotly identities.')
 param entraTenantId string
 @description('App registration client ID configured with Spotly app roles.')
@@ -31,6 +35,8 @@ module resources 'resources.bicep' = {
   scope: resourceGroup
   params: {
     location: location
+    sqlLocation: sqlLocation
+    deploySql: deploySql
     namePrefix: 'spotly-${take(normalizedEnvironment, 12)}'
     suffix: suffix
     tags: tags
@@ -46,6 +52,6 @@ output AZURE_RESOURCE_GROUP string = resourceGroup.name
 output SERVICE_API_RESOURCE_NAME string = resources.outputs.apiName
 output SERVICE_API_URI string = resources.outputs.apiUri
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = resources.outputs.applicationInsightsConnectionString
-output AZURE_SQL_SERVER_FQDN string = resources.outputs.sqlServerFqdn
+output AZURE_SQL_SERVER_FQDN string = deploySql ? resources.outputs.sqlServerFqdn : ''
 output AZURE_KEY_VAULT_URI string = resources.outputs.keyVaultUri
 output AZURE_STORAGE_ACCOUNT_NAME string = resources.outputs.storageAccountName
