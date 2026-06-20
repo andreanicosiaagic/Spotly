@@ -1,4 +1,4 @@
-﻿# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 # Spotly – CI/CD Pipeline
 #
 # SETUP ONCE (GitHub → Settings → Secrets and variables):
@@ -42,14 +42,29 @@ on:
 jobs:
   # ── Build ──────────────────────────────────────────────────────────────────
   build:
-    name: Build API
+    name: Build API + Frontend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm ci && npm run build
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+
+      - name: Copy frontend dist to backend wwwroot
+        run: |
+          mkdir -p backend/Spotly.Api/wwwroot
+          cp -r frontend/dist/. backend/Spotly.Api/wwwroot/
 
       - name: Publish
         run: |
@@ -125,10 +140,10 @@ jobs:
           with urllib.request.urlopen(req) as r:
             data = json.loads(r.read())
           assets = [a for a in data['assets']
-                    if 'linux' in a['name'] and 'amd64' in a['name'] and a['name'].endswith('.tar.gz')]
+                    if 'linux' in a['name'] and 'amd64' in a['name'] and a['name'].endswith('.tar.bz2')]
           print(assets[0]['browser_download_url'])
           ")
-          curl -fsSL "$DOWNLOAD_URL" | sudo tar xz -C /usr/local/bin
+          curl -fsSL "$DOWNLOAD_URL" | sudo tar xj -C /usr/local/bin
           sqlcmd --version
 
           # Write grant script (bash expands ${APP_NAME} here)
@@ -218,10 +233,10 @@ jobs:
           with urllib.request.urlopen(req) as r:
             data = json.loads(r.read())
           assets = [a for a in data['assets']
-                    if 'linux' in a['name'] and 'amd64' in a['name'] and a['name'].endswith('.tar.gz')]
+                    if 'linux' in a['name'] and 'amd64' in a['name'] and a['name'].endswith('.tar.bz2')]
           print(assets[0]['browser_download_url'])
           ")
-          curl -fsSL "$DOWNLOAD_URL" | sudo tar xz -C /usr/local/bin
+          curl -fsSL "$DOWNLOAD_URL" | sudo tar xj -C /usr/local/bin
           sqlcmd --version
 
           # Write grant script (bash expands ${APP_NAME} here)
@@ -311,10 +326,10 @@ jobs:
           with urllib.request.urlopen(req) as r:
             data = json.loads(r.read())
           assets = [a for a in data['assets']
-                    if 'linux' in a['name'] and 'amd64' in a['name'] and a['name'].endswith('.tar.gz')]
+                    if 'linux' in a['name'] and 'amd64' in a['name'] and a['name'].endswith('.tar.bz2')]
           print(assets[0]['browser_download_url'])
           ")
-          curl -fsSL "$DOWNLOAD_URL" | sudo tar xz -C /usr/local/bin
+          curl -fsSL "$DOWNLOAD_URL" | sudo tar xj -C /usr/local/bin
           sqlcmd --version
 
           # Write grant script (bash expands ${APP_NAME} here)

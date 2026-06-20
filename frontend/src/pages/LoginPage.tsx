@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { DEMO_PROFILES } from '../mocks/data/users'
 import { useAuth } from '../hooks/useAuth'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { AppIcon } from '../components/AppIcon'
 
 // Accesso dimostrativo (login finta): nessun Entra ID, l'utente sceglie un
 // profilo demo ed entra nell'app con dati simulati.

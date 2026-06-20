@@ -117,6 +117,8 @@ try
         diagnostics.Set("RequestScheme", context.Request.Scheme);
     });
     app.UseHttpsRedirection();
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
     app.UseCors();
     app.UseAuthentication();
     app.UseAuthorization();
@@ -131,6 +133,7 @@ try
     app.MapLunchEndpoints();
     app.MapMeEndpoints();
     app.MapCollaborationEndpoints();
+    app.MapFallbackToFile("index.html");
     app.Run();
 }
 catch (Exception exception)

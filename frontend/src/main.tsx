@@ -8,7 +8,7 @@ import { applyTheme, initialTheme } from './store/themeStore'
 applyTheme(initialTheme())
 
 async function enableMocking() {
-  const useMsw = import.meta.env.DEV && import.meta.env.VITE_USE_MSW === 'true'
+  const useMsw = import.meta.env.VITE_USE_MSW === 'true'
   if (useMsw) {
     const { worker } = await import('./mocks/browser')
     return worker.start({ onUnhandledRequest: 'bypass' })

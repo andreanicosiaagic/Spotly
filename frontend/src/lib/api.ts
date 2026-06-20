@@ -12,7 +12,7 @@ export function apiUrl(path: string): string {
 
 export function getAuthToken(): string | null {
   const { profile } = useAuthStore.getState()
-  return import.meta.env.DEV && profile ? toDevAccessToken(profile) : null
+  return profile ? toDevAccessToken(profile) : null
 }
 
 export function buildAuthHeaders(init?: HeadersInit): Headers {
