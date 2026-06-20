@@ -14,6 +14,7 @@ param sqlAdminLogin string = ''
 param sqlAdminObjectId string = ''
 @description('Principal type of the SQL admin: User for interactive, Application for CI/CD.')
 @allowed(['User', 'Group', 'Application'])
+#disable-next-line no-unused-params
 param sqlAdminPrincipalType string = 'Application'
 
 var sqlAdminConfigured = !empty(sqlAdminLogin) && !empty(sqlAdminObjectId)
@@ -234,6 +235,8 @@ resource sqlAadAdmin 'Microsoft.Sql/servers/administrators@2023-08-01' = {
   name: 'ActiveDirectory'
   properties: {
     administratorType: 'ActiveDirectory'
+    // When deploying SP creds are available, use the SP as admin so colleagues
+    // can be granted access from the portal via Entra. Falls back to app identity.
     login: sqlAdminConfigured ? sqlAdminLogin : webApp.name
     sid: sqlAdminConfigured ? sqlAdminObjectId : webApp.identity.principalId
     tenantId: entraTenantId
