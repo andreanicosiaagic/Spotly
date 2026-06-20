@@ -416,7 +416,8 @@ resource appSettings 'Microsoft.Web/sites/config@2024-11-01' = {
     Azure__Storage__ContainerName: 'floor-plans'
     Booking__CheckInCutoffUtc: '09:30'
     Cors__AllowedOrigins__0: effectiveOrigin
-    SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
+    SCM_DO_BUILD_DURING_DEPLOYMENT: 'false'
+    ENABLE_ORYX_BUILD: 'false'
   }
 }
 
