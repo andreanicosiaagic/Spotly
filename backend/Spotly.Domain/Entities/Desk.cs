@@ -22,6 +22,8 @@ public class DeskBooking
     public BookingStatus Status { get; set; } = BookingStatus.Active;
     public DateTime? LockedUntil { get; set; }
     public string? LockedByUserId { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
     public DateTime? CheckedInAtUtc { get; set; }
+    public DateTime CheckInOpensAtUtc { get; set; }
     public DateTime CheckInDeadlineUtc { get; set; }
 }

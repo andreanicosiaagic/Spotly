@@ -10,6 +10,7 @@ public sealed class MockTelegramRestaurantGateway(
 {
     private static readonly HashSet<string> SupportedCodes = ["OK", "FULL", "CLOSED", "INVALID_DATE", "TIMEOUT"];
     private readonly Dictionary<string, string> _nextOutcomes = [];
+    private readonly HashSet<string> _cancelledPartnerReferences = [];
     private readonly Lock _gate = new();
 
     public Task<string> SendBookingAsync(PartnerBookingCommand command, CancellationToken cancellationToken = default)
@@ -28,6 +29,17 @@ public sealed class MockTelegramRestaurantGateway(
             requestPayload.Length, code, remaining);
         return Task.FromResult(protocol.EncodeBookingResult(new PartnerBookingResult(command.CorrelationId, command.RestaurantId,
             command.BookingDate, code, remaining, reference)));
+    }
+
+    public Task<string> SendCancellationAsync(PartnerCancellationCommand command, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var requestPayload = protocol.EncodeCancellation(command);
+        lock (_gate) _cancelledPartnerReferences.Add(command.PartnerReference);
+        logger.LogInformation("[MOCK Telegram] Protocol cancellation sent bytes={PayloadLength}; restaurant={RestaurantId}",
+            requestPayload.Length, command.RestaurantId);
+        return Task.FromResult(protocol.EncodeCancellationResult(new PartnerCancellationResult(command.CorrelationId,
+            command.RestaurantId, command.BookingDate, "OK")));
     }
 
     public void SetNextBookingOutcome(string restaurantId, string code)

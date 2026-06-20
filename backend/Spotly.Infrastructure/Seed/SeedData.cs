@@ -36,22 +36,22 @@ public static class SeedData
         new() { RestaurantId = "R02", LocationId = "HQ", Name = "La Tavola", Capacity = 30, WhatsAppNumber = "+390200000102", TelegramChatId = "demo-r02" },
     ];
 
-    public static List<RestaurantSlot> RestaurantSlots(DateOnly date) =>
+    public static List<RestaurantSlot> RestaurantSlots(DateOnly anchorDate, DateOnly date) =>
     [
-        new() { SlotId = "S01", RestaurantId = "R01", SlotTime = new TimeOnly(12, 0),  Capacity = 15, Available = 8,  BookingDate = date },
-        new() { SlotId = "S02", RestaurantId = "R01", SlotTime = new TimeOnly(12, 30), Capacity = 15, Available = 0,  BookingDate = date },
-        new() { SlotId = "S03", RestaurantId = "R01", SlotTime = new TimeOnly(13, 0),  Capacity = 10, Available = 5,  BookingDate = date },
-        new() { SlotId = "S04", RestaurantId = "R02", SlotTime = new TimeOnly(12, 0),  Capacity = 15, Available = 12, BookingDate = date },
-        new() { SlotId = "S05", RestaurantId = "R02", SlotTime = new TimeOnly(13, 0),  Capacity = 15, Available = 3,  BookingDate = date },
+        new() { SlotId = $"S01-{date:yyyyMMdd}", RestaurantId = "R01", SlotTime = new TimeOnly(12, 0),  Capacity = 15, Available = SlotAvailability(anchorDate, date, 0, 8, 0),  BookingDate = date },
+        new() { SlotId = $"S02-{date:yyyyMMdd}", RestaurantId = "R01", SlotTime = new TimeOnly(12, 30), Capacity = 15, Available = SlotAvailability(anchorDate, date, 1, 4, 0),  BookingDate = date },
+        new() { SlotId = $"S03-{date:yyyyMMdd}", RestaurantId = "R01", SlotTime = new TimeOnly(13, 0),  Capacity = 10, Available = SlotAvailability(anchorDate, date, 2, 5, 0),  BookingDate = date },
+        new() { SlotId = $"S04-{date:yyyyMMdd}", RestaurantId = "R02", SlotTime = new TimeOnly(12, 0),  Capacity = 15, Available = SlotAvailability(anchorDate, date, 3, 12, 0), BookingDate = date },
+        new() { SlotId = $"S05-{date:yyyyMMdd}", RestaurantId = "R02", SlotTime = new TimeOnly(13, 0),  Capacity = 15, Available = SlotAvailability(anchorDate, date, 4, 3, 0),  BookingDate = date },
     ];
 
     public static List<MenuItem> MenuItems(DateOnly date) =>
     [
-        new() { ItemId = "M01", RestaurantId = "R01", MenuDate = date, Name = "Pasta al pomodoro",  Category = "primo",    Allergens = "glutine" },
-        new() { ItemId = "M02", RestaurantId = "R01", MenuDate = date, Name = "Pollo arrosto",       Category = "secondo",  Allergens = ""        },
-        new() { ItemId = "M03", RestaurantId = "R01", MenuDate = date, Name = "Insalata mista",      Category = "contorno", Allergens = ""        },
-        new() { ItemId = "M04", RestaurantId = "R02", MenuDate = date, Name = "Risotto ai funghi",   Category = "primo",    Allergens = "latte"   },
-        new() { ItemId = "M05", RestaurantId = "R02", MenuDate = date, Name = "Salmone al forno",    Category = "secondo",  Allergens = "pesce"   },
+        new() { ItemId = $"M01-{date:yyyyMMdd}", RestaurantId = "R01", MenuDate = date, Name = "Pasta al pomodoro",  Category = "primo",    Allergens = "glutine" },
+        new() { ItemId = $"M02-{date:yyyyMMdd}", RestaurantId = "R01", MenuDate = date, Name = "Pollo arrosto",       Category = "secondo",  Allergens = ""        },
+        new() { ItemId = $"M03-{date:yyyyMMdd}", RestaurantId = "R01", MenuDate = date, Name = "Insalata mista",      Category = "contorno", Allergens = ""        },
+        new() { ItemId = $"M04-{date:yyyyMMdd}", RestaurantId = "R02", MenuDate = date, Name = "Risotto ai funghi",   Category = "primo",    Allergens = "latte"   },
+        new() { ItemId = $"M05-{date:yyyyMMdd}", RestaurantId = "R02", MenuDate = date, Name = "Salmone al forno",    Category = "secondo",  Allergens = "pesce"   },
     ];
 
     public static List<LunchBoxCatalog> LunchBoxes() =>
@@ -61,9 +61,19 @@ public static class SeedData
         new() { BoxId = "LB03", Name = "Box Proteico",  Description = "Proteine, verdure, senza glutine",         Allergens = "",        IsAvailable = true },
     ];
 
-    public static List<RestaurantAvailability> RestaurantAvailabilities(DateOnly date) =>
+    public static List<RestaurantAvailability> RestaurantAvailabilities(DateOnly anchorDate, DateOnly date) =>
     [
-        new() { RestaurantId = "R01", BookingDate = date, AvailableSeats = 18, Sequence = 1, LastMessageId = "seed-r01", UpdatedAtUtc = DateTime.UtcNow },
-        new() { RestaurantId = "R02", BookingDate = date, AvailableSeats = 9, Sequence = 1, LastMessageId = "seed-r02", UpdatedAtUtc = DateTime.UtcNow },
+        new() { RestaurantId = "R01", BookingDate = date, AvailableSeats = RestaurantSeats(anchorDate, date, 0, 18), Sequence = 1, LastPartnerSequence = 1, LastMessageId = $"seed-r01-{date:yyyyMMdd}", UpdatedAtUtc = SeedTimestamp(date) },
+        new() { RestaurantId = "R02", BookingDate = date, AvailableSeats = RestaurantSeats(anchorDate, date, 1, 9), Sequence = 1, LastPartnerSequence = 1, LastMessageId = $"seed-r02-{date:yyyyMMdd}", UpdatedAtUtc = SeedTimestamp(date) },
     ];
+
+    private static int SlotAvailability(DateOnly anchorDate, DateOnly date, int offset, int baseline, int fullDayValue) =>
+        IsLunchBoxDemoDay(anchorDate, date) ? fullDayValue : Math.Max(0, baseline - ((date.DayNumber + offset) % 4));
+
+    private static int RestaurantSeats(DateOnly anchorDate, DateOnly date, int offset, int baseline) =>
+        IsLunchBoxDemoDay(anchorDate, date) ? 0 : Math.Max(0, baseline - ((date.DayNumber + offset) % 5));
+
+    private static bool IsLunchBoxDemoDay(DateOnly anchorDate, DateOnly date) => date == anchorDate.AddDays(1);
+
+    private static DateTime SeedTimestamp(DateOnly date) => DateTime.SpecifyKind(date.ToDateTime(new TimeOnly(8, 0)), DateTimeKind.Utc);
 }

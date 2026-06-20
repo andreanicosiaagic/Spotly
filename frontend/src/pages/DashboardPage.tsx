@@ -2,29 +2,29 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { AppIcon } from '../components/AppIcon'
 import { DateStrip } from '../components/DateStrip'
+import { getJson } from '../lib/api'
+import { formatDateLabel } from '../lib/date'
 import { useBookingStore } from '../store/bookingStore'
 import { useAuth } from '../hooks/useAuth'
+import { useDeskBooking, useLunchBooking, useParkingBooking } from '../hooks/use-bookings'
 import type { CalendarAvailability, TeamAvailabilityMatch, TeamMemberMatch } from '../types'
-
-const API = import.meta.env.VITE_API_URL ?? ''
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const { selectedDate, parkingBooking, deskBooking, lunchBooking } = useBookingStore()
+  const { selectedDate } = useBookingStore()
+  const parkingBooking = useParkingBooking(selectedDate)
+  const deskBooking = useDeskBooking(selectedDate)
+  const lunchBooking = useLunchBooking(selectedDate)
   const canSeeTeam = user?.roles.some(role => ['Manager', 'Facility', 'Admin'].includes(role)) ?? false
   const teamQuery = useQuery<TeamAvailabilityMatch>({
     queryKey: ['team-availability', selectedDate],
-    queryFn: async () => {
-      const response = await fetch(`${API}/api/collaboration/team-match?date=${selectedDate}`)
-      if (!response.ok) throw new Error('Disponibilità del team non disponibile')
-      return response.json()
-    },
+    queryFn: () => getJson<TeamAvailabilityMatch>(`/api/collaboration/team-match?date=${selectedDate}`),
     enabled: canSeeTeam,
   })
 
   return <div>
     <div className="page-mobile-heading">
-      <p className="!mb-1 !text-[#A89E92]">{new Date(`${selectedDate}T12:00:00`).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+      <p className="!mb-1 !text-[#A89E92]">{formatDateLabel(selectedDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
       <h1>Ciao, {user?.name.split(' ')[0] ?? 'Utente'}</h1>
     </div>
     <div className="mb-5 lg:hidden"><DateStrip /></div>
@@ -39,13 +39,13 @@ export default function DashboardPage() {
         <p className="section-label lg:hidden">PRENOTAZIONI</p>
         <div className="grid gap-3 lg:grid-cols-3 lg:gap-4">
           <BookingCard icon="directions_car" tone="blue" title="Parcheggio" to="/parking"
-            booking={parkingBooking ? `Posto ${parkingBooking.spotId}` : null} />
+            booking={parkingBooking.data ? `Posto ${parkingBooking.data.spotId}` : null} />
           <BookingCard icon="chair" tone="green" title="Postazione" to="/desk"
-            booking={deskBooking ? `Desk ${deskBooking.deskId}` : null} />
+            booking={deskBooking.data ? `Desk ${deskBooking.data.deskId}` : null} />
           <BookingCard icon="restaurant" tone="coral" title="Pranzo" to="/lunch"
-            booking={lunchBooking ? (lunchBooking.isLunchBox ? 'Lunch Box' : 'Ristorante') : null} />
+            booking={lunchBooking.data ? (lunchBooking.data.isLunchBox ? 'Lunch Box' : 'Ristorante') : null} />
         </div>
-        {!parkingBooking && <div className="spotly-alert mt-4 flex items-center gap-2.5 border border-[#F3C9BC] bg-[#FBE7E1] text-[#A8432C]">
+        {!parkingBooking.data && <div className="spotly-alert mt-4 flex items-center gap-2.5 border border-[#F3C9BC] bg-[#FBE7E1] text-[#A8432C]">
           <AppIcon name="error" className="text-[21px]" /><span>Prenota il parcheggio in anticipo per assicurarti un posto.</span>
         </div>}
       </div>
@@ -81,7 +81,7 @@ function TeamPanel({ data, loading, error }: { data?: TeamAvailabilityMatch; loa
         <div className="space-y-2">{data.members.slice(0, 4).map(member => <div key={member.userId} className="flex items-center gap-2 text-xs">
           <i className={`h-2 w-2 rounded-full ${member.isMatch ? 'bg-[#2F8A5C]' : 'bg-[#C9BDAB]'}`} /><span className="font-semibold">{member.displayName}</span><span className="ml-auto text-text-muted">{memberBadge(member)}</span>
         </div>)}</div>
-        <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-[13px] border-0 bg-primary px-3 py-3 text-sm font-bold text-white shadow-[0_4px_12px_rgba(236,106,77,.25)]"><AppIcon name="groups" />Prenota per il team</button>
+        <button disabled className="mt-4 flex w-full items-center justify-center gap-2 rounded-[13px] border-0 bg-[#D7D2C7] px-3 py-3 text-sm font-bold text-[#6F6659]"><AppIcon name="groups" />Prenota per il team · demo futura</button>
       </>}
     </div>
     <div className="mt-4 flex gap-2.5 rounded-2xl bg-[#F2EDE4] p-4 text-[13px] leading-5 text-[#5C544A]"><AppIcon name="tips_and_updates" className="text-[22px] text-[#B07D22]" /><span>Spotly combina la sede impostata su Teams con il calendario free/busy.</span></div>

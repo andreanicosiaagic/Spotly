@@ -1,6 +1,8 @@
 import { http, HttpResponse } from 'msw'
 
-const BASE = import.meta.env.VITE_API_URL ?? ''
+const BASE = import.meta.env.DEV && import.meta.env.VITE_USE_DIRECT_API !== 'true'
+  ? ''
+  : (import.meta.env.VITE_API_URL ?? '')
 
 export const collaborationHandlers = [
   http.get(`${BASE}/api/collaboration/team-match`, ({ request }) => {

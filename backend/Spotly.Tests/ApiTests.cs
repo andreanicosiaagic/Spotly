@@ -23,7 +23,7 @@ public class ApiTests
     {
         await using var app = new SpotlyApiFactory();
         var client = AuthenticatedClient(app, "claim-user");
-        var date = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd");
+        var date = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(2).ToString("yyyy-MM-dd");
         var response = await client.PostAsJsonAsync("/api/parking/bookings", new { spotId = "P01", bookingDate = date, userId = "attacker" }, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var booking = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
@@ -37,7 +37,7 @@ public class ApiTests
         var client = AuthenticatedClient(app, "standard-user");
         var response = await client.PostAsJsonAsync("/api/parking/bookings", new
         {
-            spotId = "P05", bookingDate = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd"),
+            spotId = "P05", bookingDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(2).ToString("yyyy-MM-dd"),
         }, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -50,7 +50,7 @@ public class ApiTests
         client.DefaultRequestHeaders.Add("X-Dev-Department", "Sales");
         var response = await client.PostAsJsonAsync("/api/desk/bookings", new
         {
-            deskId = "D07", bookingDate = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd"),
+            deskId = "D07", bookingDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(2).ToString("yyyy-MM-dd"),
         }, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -61,9 +61,11 @@ public class ApiTests
         await using var app = new SpotlyApiFactory();
         var client = AuthenticatedClient(app, "lunch-user");
         var date = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd");
+        var slotId = $"S01-{date.Replace("-", string.Empty, StringComparison.Ordinal)}";
+        var menuItemId = $"M01-{date.Replace("-", string.Empty, StringComparison.Ordinal)}";
         var before = await client.GetFromJsonAsync<JsonElement>($"/api/lunch/restaurants?date={date}", TestContext.Current.CancellationToken);
         var initialSeats = before.EnumerateArray().First(x => x.GetProperty("restaurantId").GetString() == "R01").GetProperty("availableSeats").GetInt32();
-        var response = await client.PostAsJsonAsync("/api/lunch/bookings", new { restaurantId = "R01", isLunchBox = false, bookingDate = date },
+        var response = await client.PostAsJsonAsync("/api/lunch/bookings", new { restaurantId = "R01", slotId, menuItemIds = new[] { menuItemId }, isLunchBox = false, bookingDate = date },
             TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
@@ -77,10 +79,12 @@ public class ApiTests
         await using var app = new SpotlyApiFactory();
         var client = AuthenticatedClient(app, "facility-lunch-user", "Facility");
         var date = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd");
+        var slotId = $"S01-{date.Replace("-", string.Empty, StringComparison.Ordinal)}";
+        var menuItemId = $"M01-{date.Replace("-", string.Empty, StringComparison.Ordinal)}";
         var configured = await client.PostAsJsonAsync("/api/lunch/demo/restaurants/R01/next-booking-outcome", new { code = "FULL" },
             TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.NoContent, configured.StatusCode);
-        var response = await client.PostAsJsonAsync("/api/lunch/bookings", new { restaurantId = "R01", isLunchBox = false, bookingDate = date },
+        var response = await client.PostAsJsonAsync("/api/lunch/bookings", new { restaurantId = "R01", slotId, menuItemIds = new[] { menuItemId }, isLunchBox = false, bookingDate = date },
             TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         var error = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);

@@ -1,46 +1,97 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useOptimistic } from 'react'
+import { useOptimistic, startTransition } from 'react'
 import { AppIcon } from '../components/AppIcon'
 import { DateStrip } from '../components/DateStrip'
+import { ParkingMap } from '../components/ParkingMap'
+import { deleteJson, getJson, postJson } from '../lib/api'
+import { formatDateLabel, isToday } from '../lib/date'
+import { useParkingBooking } from '../hooks/use-bookings'
+import { useSignalR } from '../hooks/useSignalR'
 import { useBookingStore } from '../store/bookingStore'
-import type { ParkingSpot } from '../types'
+import type { ParkingBooking, ParkingSpot } from '../types'
 
-const API = import.meta.env.VITE_API_URL ?? ''
 const statusClass = { available: 'border-[#78B891] bg-[#D8EFE1] text-[#266E49]', occupied: 'border-[#D9CFC0] bg-[#E9E3D9] text-[#928879]', pending: 'border-[#EC6A4D] bg-[#FCEDE7] text-[#C0563C]', reserved: 'border-[#D6AD60] bg-[#F8E9C9] text-[#8B651E]' }
 const labels = { available: 'Libero', occupied: 'Occupato', pending: 'In prenotazione', reserved: 'Riservato' }
+const typeLegend = [
+  { glyph: 'EV', label: 'Ricarica elettrica' },
+  { glyph: 'H', label: 'Posto disabili' },
+  { glyph: 'G', label: 'Ospiti' },
+  { glyph: 'R', label: 'Area partner' },
+]
 
 export default function ParkingPage() {
-  const { selectedDate, setParkingBooking } = useBookingStore()
+  const { selectedDate } = useBookingStore()
   const queryClient = useQueryClient()
-  const query = useQuery<ParkingSpot[]>({ queryKey: ['parking-spots', selectedDate], queryFn: async () => {
-    const response = await fetch(`${API}/api/parking/spots?date=${selectedDate}`); if (!response.ok) throw new Error(); return response.json()
-  } })
+  const activeBooking = useParkingBooking(selectedDate)
+  const query = useQuery<ParkingSpot[]>({ queryKey: ['parking-spots', selectedDate], queryFn: () => getJson<ParkingSpot[]>(`/api/parking/spots?date=${selectedDate}`) })
   const spots = query.data ?? []
   const [optimisticSpots, addOptimistic] = useOptimistic(spots, (current, id: string) => current.map(spot => spot.spotId === id ? { ...spot, status: 'pending' as const } : spot))
-  const booking = useMutation({ mutationFn: async (spotId: string) => {
-    const response = await fetch(`${API}/api/parking/bookings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spotId, bookingDate: selectedDate }) })
-    const body = await response.json(); if (!response.ok) throw new Error(body.error ?? 'Prenotazione non riuscita'); return body
-  }, onSuccess: result => { setParkingBooking(result); void queryClient.invalidateQueries({ queryKey: ['parking-spots', selectedDate] }) } })
+  useSignalR('HQ', selectedDate, (update) => {
+    queryClient.setQueryData<ParkingSpot[]>(['parking-spots', selectedDate], (current) => current?.map((spot) => (
+      spot.spotId === update.resourceId ? { ...spot, status: update.newStatus } : spot
+    )) ?? [])
+  })
+  const booking = useMutation({
+    mutationFn: async (spotId: string) => {
+      await postJson(`/api/parking/spots/${spotId}/lock?date=${selectedDate}`)
+      return postJson<ParkingBooking>('/api/parking/bookings', { spotId, bookingDate: selectedDate })
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['parking-booking', selectedDate] })
+      void queryClient.invalidateQueries({ queryKey: ['parking-spots', selectedDate] })
+    },
+  })
+  const cancellation = useMutation({
+    mutationFn: async (bookingId: string) => deleteJson(`/api/parking/bookings/${bookingId}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['parking-booking', selectedDate] })
+      void queryClient.invalidateQueries({ queryKey: ['parking-spots', selectedDate] })
+    },
+  })
+  const checkIn = useMutation({
+    mutationFn: async (bookingId: string) => postJson(`/api/parking/bookings/${bookingId}/check-in`),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['parking-booking', selectedDate] }),
+  })
+  const selectSpot = (spotId: string) => {
+    startTransition(async () => {
+      addOptimistic(spotId)
+      try { await booking.mutateAsync(spotId) } catch { /* errore mostrato via booking.error */ }
+    })
+  }
 
   if (query.isLoading) return <Loading label="Caricamento parcheggio…" />
   if (query.isError) return <Loading label="Parcheggio non disponibile" danger />
   return <div>
     <div className="page-mobile-heading"><h1>Parcheggio</h1><p>Scegli un posto disponibile</p></div>
     <div className="mb-5 lg:hidden"><DateStrip /></div>
-    {booking.error && <div role="alert" className="spotly-alert mb-4 border border-[#F3C9BC] bg-[#FBE7E1] text-[#A8432C]">{booking.error.message}</div>}
+    {(booking.error || cancellation.error || checkIn.error) && <div role="alert" className="spotly-alert mb-4 border border-[#F3C9BC] bg-[#FBE7E1] text-[#A8432C]">
+      {booking.error?.message ?? cancellation.error?.message ?? checkIn.error?.message}
+    </div>}
+    {activeBooking.data && <section className="spotly-card mb-4 p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="m-0 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#A89E92]">Prenotazione attiva</p>
+          <h2 className="mt-1 mb-1 text-base font-bold">Posto {activeBooking.data.spotId}</h2>
+          <p className="m-0 text-sm text-text-muted">{formatDateLabel(activeBooking.data.bookingDate, { day: 'numeric', month: 'long', year: 'numeric' })}{activeBooking.data.checkedInAtUtc ? ' · check-in completato' : ''}</p>
+        </div>
+        <div className="flex gap-2">
+          {isToday(selectedDate) && !activeBooking.data.checkedInAtUtc && <button onClick={() => checkIn.mutate(activeBooking.data!.bookingId)} disabled={checkIn.isPending} className="rounded-[12px] border border-[#B8DCC7] bg-[#E7F3EC] px-3 py-2 text-xs font-bold text-[#266E49]">Check-in</button>}
+          <button onClick={() => cancellation.mutate(activeBooking.data!.bookingId)} disabled={cancellation.isPending} className="rounded-[12px] border border-[#F3C9BC] bg-[#FFF7F2] px-3 py-2 text-xs font-bold text-[#C0563C]">Annulla</button>
+        </div>
+      </div>
+    </section>}
     <div className="grid items-start gap-6 lg:grid-cols-[1fr_320px]">
       <section aria-label="Mappa parcheggio" className="rounded-[24px] border border-[#E3E8DF] bg-[#F1F6F0] p-4 sm:p-[22px]">
-        <div className="mb-4 flex items-center justify-between"><span className="rounded-b-lg bg-[#2B2622] px-3 py-1 text-[10px] font-bold text-white">Ingresso principale</span><span className="grid h-7 w-7 place-items-center rounded-full border border-[#C9BDAB] text-[10px] font-extrabold text-[#A8987E]">N</span></div>
-        <div className="grid grid-cols-5 gap-2 sm:gap-3">{optimisticSpots.map(spot => <button key={spot.spotId}
-          disabled={spot.status !== 'available' || booking.isPending} title={`${spot.spotNumber} · ${labels[spot.status]}`}
-          onClick={() => { addOptimistic(spot.spotId); booking.mutate(spot.spotId) }}
-          className={`aspect-[.72] rounded-md border-[1.5px] p-1 text-[10px] font-extrabold transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-75 ${statusClass[spot.status]}`}>
-          <AppIcon name={spot.type === 'ev' ? 'ev_station' : spot.type === 'disabled' ? 'accessible' : 'directions_car'} className="block text-[17px]" />{spot.spotNumber}
-        </button>)}</div>
-        <div className="mt-5 rounded-xl border border-[#DACDB8] bg-[#EAE1D2] py-4 text-center text-[10px] font-extrabold tracking-[.12em] text-[#A8987E]">EDIFICIO</div>
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-[11px] font-extrabold uppercase tracking-[.1em] text-[#8FA77E]">Parcheggio esterno</span>
+          <span className="rounded-lg bg-[#E3EEDD] px-2.5 py-1 text-[10px] font-extrabold text-[#6E8A5C]">Livello 0</span>
+        </div>
+        <ParkingMap spots={optimisticSpots} onSelect={selectSpot} busy={booking.isPending || activeBooking.data !== null} />
       </section>
       <aside>
-        <div className="spotly-card p-[18px]"><h2 className="mt-0 mb-3 text-sm font-extrabold">Legenda</h2><div className="space-y-3">{Object.entries(labels).map(([status, label]) => <div key={status} className="flex items-center gap-2.5 text-[13px] font-semibold text-[#5C544A]"><i className={`h-4 w-4 rounded-[5px] border ${statusClass[status as keyof typeof statusClass]}`} />{label}</div>)}</div></div>
+        <div className="spotly-card p-[18px]"><h2 className="mt-0 mb-3 text-sm font-extrabold">Legenda</h2><div className="space-y-3">{Object.entries(labels).map(([status, label]) => <div key={status} className="flex items-center gap-2.5 text-[13px] font-semibold text-[#5C544A]"><i className={`h-4 w-4 rounded-[5px] border ${statusClass[status as keyof typeof statusClass]}`} />{label}</div>)}</div>
+          <div className="mt-4 border-t border-[#EFE8DC] pt-3"><h3 className="mt-0 mb-2 text-[11px] font-extrabold uppercase tracking-wider text-[#A89E92]">Tipo posto</h3><div className="space-y-2">{typeLegend.map(item => <div key={item.glyph} className="flex items-center gap-2.5 text-[12px] font-semibold text-[#5C544A]"><i className="grid h-5 w-5 place-items-center rounded-[5px] bg-[#EFE9DF] text-[9px] font-extrabold text-[#8A7F6E]">{item.glyph}</i>{item.label}</div>)}</div></div>
+        </div>
         <div className="mt-4 flex gap-2.5 rounded-2xl bg-[#E9F0FB] p-4 text-[13px] leading-5 text-[#3F5577]"><AppIcon name="info" className="text-[21px] text-[#3E6BB0]" /><span>I posti speciali richiedono l’idoneità associata al profilo.</span></div>
       </aside>
     </div>

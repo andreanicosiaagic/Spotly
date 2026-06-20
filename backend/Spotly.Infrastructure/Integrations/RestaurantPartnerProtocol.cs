@@ -27,7 +27,8 @@ public sealed class RestaurantPartnerProtocol : IRestaurantPartnerProtocol
     }
 
     public string EncodeBooking(PartnerBookingCommand command) => string.Join('|', Prefix, "BOOK", command.CorrelationId,
-        command.RestaurantId, command.BookingDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), command.PartySize);
+        command.RestaurantId, command.BookingDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), command.SlotId,
+        command.PartySize, string.Join(',', command.MenuItemIds));
 
     public string EncodeBookingResult(PartnerBookingResult result) => string.Join('|', Prefix, "BOOK_RESULT", result.CorrelationId,
         result.RestaurantId, result.BookingDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), result.Code,
@@ -41,6 +42,23 @@ public sealed class RestaurantPartnerProtocol : IRestaurantPartnerProtocol
             !DateOnly.TryParseExact(parts[5], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ||
             !int.TryParse(parts[7], CultureInfo.InvariantCulture, out var remaining) || remaining < 0) return false;
         result = new(parts[3], parts[4], date, parts[6], remaining, parts[8] == "-" ? null : parts[8]);
+        return true;
+    }
+
+    public string EncodeCancellation(PartnerCancellationCommand command) => string.Join('|', Prefix, "CANCEL", command.CorrelationId,
+        command.RestaurantId, command.BookingDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), command.SlotId,
+        command.PartnerReference);
+
+    public string EncodeCancellationResult(PartnerCancellationResult result) => string.Join('|', Prefix, "CANCEL_RESULT",
+        result.CorrelationId, result.RestaurantId, result.BookingDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), result.Code);
+
+    public bool TryDecodeCancellationResult(string payload, out PartnerCancellationResult? result)
+    {
+        result = null;
+        var parts = payload.Split('|', StringSplitOptions.TrimEntries);
+        if (parts.Length != 7 || parts[0] != "SPOTLY" || parts[1] != "1" || parts[2] != "CANCEL_RESULT" ||
+            !DateOnly.TryParseExact(parts[5], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)) return false;
+        result = new(parts[3], parts[4], date, parts[6]);
         return true;
     }
 }

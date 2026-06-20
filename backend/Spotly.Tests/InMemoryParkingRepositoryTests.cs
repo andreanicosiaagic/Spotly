@@ -15,7 +15,9 @@ public class InMemoryParkingRepositoryTests
         var date = DateOnly.FromDateTime(DateTime.UtcNow);
         var attempts = await Task.WhenAll(Enumerable.Range(1, 12).Select(index => repository.TryCreateBookingAsync(new ParkingBooking
         {
-            SpotId = "P01", UserId = $"user-{index}", BookingDate = date, CheckInDeadlineUtc = DateTime.UtcNow.AddHours(2),
+            SpotId = "P01", UserId = $"user-{index}", BookingDate = date,
+            CheckInOpensAtUtc = DateTime.UtcNow.AddHours(-1),
+            CheckInDeadlineUtc = DateTime.UtcNow.AddHours(2),
         })));
         Assert.Single(attempts, x => x.Succeeded);
         Assert.Equal(11, attempts.Count(x => x.Failure == BookingFailure.ResourceUnavailable));
@@ -39,7 +41,9 @@ public class InMemoryParkingRepositoryTests
         var date = DateOnly.FromDateTime(DateTime.UtcNow);
         var created = await repository.TryCreateBookingAsync(new ParkingBooking
         {
-            SpotId = "P01", UserId = "late-user", BookingDate = date, CheckInDeadlineUtc = DateTime.UtcNow.AddMinutes(-1),
+            SpotId = "P01", UserId = "late-user", BookingDate = date,
+            CheckInOpensAtUtc = DateTime.UtcNow.AddHours(-2),
+            CheckInDeadlineUtc = DateTime.UtcNow.AddMinutes(-1),
         });
         var released = await repository.ReleaseNoShowsAsync(DateTime.UtcNow);
         Assert.True(created.Succeeded);
@@ -49,7 +53,11 @@ public class InMemoryParkingRepositoryTests
 
     private static ParkingBooking NewBooking(string spotId, string userId, DateOnly date) => new()
     {
-        SpotId = spotId, UserId = userId, BookingDate = date, CheckInDeadlineUtc = DateTime.UtcNow.AddHours(2),
+        SpotId = spotId,
+        UserId = userId,
+        BookingDate = date,
+        CheckInOpensAtUtc = DateTime.UtcNow.AddHours(-1),
+        CheckInDeadlineUtc = DateTime.UtcNow.AddHours(2),
     };
 
     private static async Task<InMemoryParkingRepository> CreateRepositoryAsync()
@@ -59,7 +67,7 @@ public class InMemoryParkingRepositoryTests
         var factory = new TestDbContextFactory(options);
         await using var db = factory.CreateDbContext();
         await SpotlyDbSeeder.SeedAsync(db, DateOnly.FromDateTime(DateTime.UtcNow));
-        return new InMemoryParkingRepository(factory);
+        return new InMemoryParkingRepository(factory, TimeProvider.System);
     }
 
     private sealed class TestDbContextFactory(DbContextOptions<SpotlyDbContext> options) : IDbContextFactory<SpotlyDbContext>

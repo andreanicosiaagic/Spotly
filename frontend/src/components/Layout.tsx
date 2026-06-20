@@ -9,11 +9,15 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/lunch': { title: 'Pranzo', subtitle: 'Prenota un locale o scegli un lunch box' },
 }
 
-export function Layout() {
+interface LayoutProps {
+  onLogoActivate: () => void
+}
+
+export function Layout({ onLogoActivate }: LayoutProps) {
   const location = useLocation()
   const meta = pageMeta[location.pathname] ?? pageMeta['/']
   return <div className="app-shell">
-    <Navbar />
+    <Navbar onLogoActivate={onLogoActivate} />
     <main className="app-main">
       <div className="app-content">
         <div className="desktop-page-header">

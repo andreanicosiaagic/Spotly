@@ -9,6 +9,8 @@ export interface User {
   name: string;
   email: string;
   roles: UserRole[];
+  department?: string;
+  parkingEligibility?: string[];
 }
 
 // M1 — Parking
@@ -29,7 +31,11 @@ export interface ParkingBooking {
   userId: string;
   bookingDate: string; // ISO date
   status: 'active' | 'cancelled' | 'noshow';
+  createdAtUtc?: string;
   lockedUntil?: string;
+  checkInOpensAtUtc?: string;
+  checkInDeadlineUtc?: string;
+  checkedInAtUtc?: string;
 }
 
 // M2 — Desk
@@ -50,18 +56,25 @@ export interface DeskBooking {
   userId: string;
   bookingDate: string;
   status: 'active' | 'cancelled' | 'noshow';
+  createdAtUtc?: string;
   lockedUntil?: string;
+  checkInOpensAtUtc?: string;
+  checkInDeadlineUtc?: string;
+  checkedInAtUtc?: string;
 }
 
 // M3 — Lunch
 export interface Restaurant {
+  locationId: string;
   restaurantId: string;
   name: string;
+  bookingDate?: string;
   capacity: number;
   availableSeats: number;
   sequence: number;
   updatedAtUtc: string;
   partnerChannelConfigured: boolean;
+  partnerSequence: number;
 }
 
 export interface RestaurantSlot {
@@ -98,12 +111,16 @@ export interface LunchBooking {
   bookingDate: string;
   isLunchBox: boolean;
   lunchBoxId?: string;
-  status: 'active' | 'cancelled';
+  status: 'active' | 'cancelled' | 'noshow';
   deliveryStatus: 'pending' | 'preparing' | 'delivered' | 'cancelled';
   partnerStatus?: 'notRequired' | 'pendingPartner' | 'confirmed' | 'rejected';
   partnerCode?: string;
   partnerReference?: string;
   partnerAvailableSeats?: number;
+  menuItemIds: string[];
+  createdAtUtc?: string;
+  partnerPendingExpiresAtUtc?: string;
+  partnerRespondedAtUtc?: string;
 }
 
 export interface RestaurantBookingResponse {
@@ -114,6 +131,8 @@ export interface RestaurantBookingResponse {
 }
 
 export interface RestaurantMessageEvent {
+  locationId: string;
+  bookingDate: string;
   restaurantId: string;
   kind: string;
   outcome: string;
@@ -123,6 +142,16 @@ export interface RestaurantMessageEvent {
 
 export interface RestaurantAvailabilityUpdate extends Restaurant {
   source: string;
+  bookingDate: string;
+}
+
+export interface LunchBoxEligibility {
+  eligible: boolean;
+  reason: string;
+  cutoffLocal: string;
+  restaurantsFull: boolean;
+  outsideOperatingHours: boolean;
+  demoDate: string;
 }
 
 export type WorkMode = 'office' | 'remote' | 'unknown';
@@ -155,3 +184,5 @@ export interface AvailabilityUpdate {
   resourceType: 'parking' | 'desk';
   newStatus: ResourceStatus;
 }
+
+export type RealtimeStatus = 'connecting' | 'connected' | 'reconnecting' | 'offline';
