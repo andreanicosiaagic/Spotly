@@ -1,10 +1,11 @@
 import type { Restaurant, RestaurantSlot, MenuItem, LunchBox } from '../../types'
+import { getTodayDateKey } from '../../lib/date'
 
-const today = new Date().toISOString().split('T')[0]
+const today = getTodayDateKey()
 
 export const SEED_RESTAURANTS: Restaurant[] = [
-  { restaurantId: 'R01', name: 'Bistrot Verde', capacity: 40, availableSeats: 18, sequence: 1, updatedAtUtc: new Date().toISOString(), partnerChannelConfigured: true },
-  { restaurantId: 'R02', name: 'La Tavola', capacity: 30, availableSeats: 9, sequence: 1, updatedAtUtc: new Date().toISOString(), partnerChannelConfigured: true },
+  { locationId: 'HQ', restaurantId: 'R01', name: 'Bistrot Verde', bookingDate: today, capacity: 40, availableSeats: 18, sequence: 1, updatedAtUtc: new Date().toISOString(), partnerChannelConfigured: true, partnerSequence: 1 },
+  { locationId: 'HQ', restaurantId: 'R02', name: 'La Tavola', bookingDate: today, capacity: 30, availableSeats: 9, sequence: 1, updatedAtUtc: new Date().toISOString(), partnerChannelConfigured: true, partnerSequence: 1 },
 ]
 
 export const SEED_RESTAURANT_SLOTS: RestaurantSlot[] = [

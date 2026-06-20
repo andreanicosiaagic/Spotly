@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "e2e:install": "python -m pip install -r requirements-e2e.txt && python -m playwright install chromium",
+    "e2e:integrated": "python e2e/run_integrated.py"
   },
   "dependencies": {
     "@microsoft/signalr": "^10.0.0",

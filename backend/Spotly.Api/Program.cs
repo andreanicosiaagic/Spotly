@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Serilog;
@@ -66,18 +67,26 @@ try
     builder.Services.AddSingleton<IRestaurantDemoGateway>(services => services.GetRequiredService<MockTelegramRestaurantGateway>());
     builder.Services.AddSingleton<RestaurantLiveService>();
     builder.Services.AddSingleton(TimeProvider.System);
+    builder.Services.AddSingleton<OfficeTime>();
+    builder.Services.AddScoped<ParkingBookingService>();
+    builder.Services.AddScoped<DeskBookingService>();
+    builder.Services.AddScoped<LunchBookingService>();
+    builder.Services.AddScoped<CollaborationQueryService>();
+    builder.Services.AddScoped<UserProfileService>();
     builder.Services.AddHostedService<BookingLifecycleService>();
     builder.Services.AddHostedService<RestaurantAvailabilityPollingService>();
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
     builder.Services.AddOpenApi();
-    builder.Services.AddHealthChecks();
+    builder.Services.AddHealthChecks()
+        .AddCheck<SpotlyReadinessHealthCheck>("spotly-readiness", failureStatus: HealthStatus.Unhealthy);
 
     var app = builder.Build();
     await using (var scope = app.Services.CreateAsyncScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<SpotlyDbContext>();
+        var officeTime = scope.ServiceProvider.GetRequiredService<OfficeTime>();
         await db.Database.EnsureCreatedAsync();
-        await SpotlyDbSeeder.SeedAsync(db, DateOnly.FromDateTime(DateTime.UtcNow));
+        await SpotlyDbSeeder.SeedAsync(db, officeTime.Today);
     }
 
     app.UseExceptionHandler();
@@ -92,6 +101,8 @@ try
     app.UseAuthorization();
 
     if (app.Environment.IsDevelopment()) app.MapOpenApi().AllowAnonymous();
+    app.MapHealthChecks("/health/live").AllowAnonymous();
+    app.MapHealthChecks("/health/ready").AllowAnonymous();
     app.MapHealthChecks("/health").AllowAnonymous();
     app.MapHub<AvailabilityHub>("/availability").RequireAuthorization("Employee");
     app.MapParkingEndpoints();
@@ -104,6 +115,7 @@ try
 catch (Exception exception)
 {
     Log.Fatal(exception, "Application terminated unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {

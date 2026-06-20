@@ -66,18 +66,38 @@ public static class BookingRules
     /// </summary>
     public static bool IsFreeCancellation(DateOnly bookingDate) => IsFreeCancellation(bookingDate, DateTime.UtcNow);
 
-    public static bool IsFreeCancellation(DateOnly bookingDate, DateTime utcNow)
+    public static bool IsFreeCancellation(DateOnly bookingDate, DateTime currentLocalTime)
     {
-        var today = DateOnly.FromDateTime(utcNow);
-        return bookingDate > today || (bookingDate == today && utcNow.Hour < FreeCancellationCutoffHour);
+        var today = DateOnly.FromDateTime(currentLocalTime);
+        return bookingDate > today || (bookingDate == today && currentLocalTime.Hour < FreeCancellationCutoffHour);
     }
 
-    public static string? ValidateBookingWindow(DateOnly bookingDate, DateTime utcNow)
+    public static string? ValidateBookingWindow(DateOnly bookingDate, DateTime currentLocalTime)
     {
-        var today = DateOnly.FromDateTime(utcNow);
+        var today = DateOnly.FromDateTime(currentLocalTime);
         if (bookingDate < today) return "R-02: non puoi prenotare per una data passata.";
         if (bookingDate > today.AddDays(MaxBookingWindowDays))
             return $"R-02: puoi prenotare al massimo {MaxBookingWindowDays} giorni in anticipo.";
+        return null;
+    }
+
+    public static string? ValidateSameDayBookingBeforeCheckInClose(DateOnly bookingDate, DateTime currentLocalTime, TimeOnly closesAtLocal)
+    {
+        var today = DateOnly.FromDateTime(currentLocalTime);
+        if (bookingDate != today) return null;
+        return TimeOnly.FromDateTime(currentLocalTime) > closesAtLocal
+            ? $"R-04: per oggi la finestra di check-in e' gia' chiusa alle {closesAtLocal:HH\\:mm}."
+            : null;
+    }
+
+    public static string? ValidateCheckInAttempt(DateOnly bookingDate, DateTime currentLocalTime, TimeOnly opensAtLocal, TimeOnly closesAtLocal)
+    {
+        var today = DateOnly.FromDateTime(currentLocalTime);
+        if (bookingDate != today) return "R-04: il check-in e' disponibile solo il giorno della prenotazione.";
+
+        var now = TimeOnly.FromDateTime(currentLocalTime);
+        if (now < opensAtLocal) return $"R-04: il check-in apre alle {opensAtLocal:HH\\:mm}.";
+        if (now > closesAtLocal) return $"R-04: il check-in chiude alle {closesAtLocal:HH\\:mm}.";
         return null;
     }
 }

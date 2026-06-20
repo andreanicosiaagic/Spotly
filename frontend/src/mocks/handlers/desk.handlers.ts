@@ -1,16 +1,20 @@
 import { http, HttpResponse } from 'msw'
 import { SEED_DESK_SPOTS, SEED_DESK_BOOKINGS } from '../data/desk'
+import { getTodayDateKey } from '../../lib/date'
 import type { DeskBooking } from '../../types'
 
 const bookings: DeskBooking[] = [...SEED_DESK_BOOKINGS]
 const spots = SEED_DESK_SPOTS.map(s => ({ ...s }))
 
-const BASE = import.meta.env.VITE_API_URL ?? ''
+const BASE = import.meta.env.DEV && import.meta.env.VITE_USE_DIRECT_API !== 'true'
+  ? ''
+  : (import.meta.env.VITE_API_URL ?? '')
+const today = getTodayDateKey()
 
 export const deskHandlers = [
   http.get(`${BASE}/api/desk/spots`, ({ request }) => {
     const url = new URL(request.url)
-    const date = url.searchParams.get('date') ?? new Date().toISOString().split('T')[0]
+    const date = url.searchParams.get('date') ?? today
     const bookedDeskIds = bookings
       .filter(b => b.bookingDate === date && b.status === 'active')
       .map(b => b.deskId)
@@ -20,12 +24,20 @@ export const deskHandlers = [
     }))
     return HttpResponse.json(result)
   }),
+  http.get(`${BASE}/api/desk/bookings/me`, ({ request }) => {
+    const url = new URL(request.url)
+    const date = url.searchParams.get('date') ?? today
+    const booking = bookings.find((item) => item.userId === 'u1' && item.bookingDate === date && item.status === 'active')
+    if (!booking) return HttpResponse.json({ error: 'Not found' }, { status: 404 })
+    return HttpResponse.json(booking)
+  }),
+  http.post(`${BASE}/api/desk/spots/:deskId/lock`, () => new HttpResponse(null, { status: 204 })),
 
   http.post(`${BASE}/api/desk/bookings`, async ({ request }) => {
-    const body = await request.json() as { deskId: string; bookingDate: string; userId: string }
+    const body = await request.json() as { deskId: string; bookingDate: string }
     // R-01: max 1 active desk booking per user per day
     const existing = bookings.find(
-      b => b.userId === body.userId && b.bookingDate === body.bookingDate && b.status === 'active'
+      b => b.userId === 'u1' && b.bookingDate === body.bookingDate && b.status === 'active'
     )
     if (existing) {
       return HttpResponse.json({ error: 'R-01: hai già una prenotazione postazione per questo giorno' }, { status: 409 })
@@ -33,7 +45,7 @@ export const deskHandlers = [
     const booking: DeskBooking = {
       bookingId: `db-${Date.now()}`,
       deskId: body.deskId,
-      userId: body.userId,
+      userId: 'u1',
       bookingDate: body.bookingDate,
       status: 'active',
     }
@@ -52,4 +64,5 @@ export const deskHandlers = [
     if (spot) spot.status = 'available'
     return new HttpResponse(null, { status: 204 })
   }),
+  http.post(`${BASE}/api/desk/bookings/:id/check-in`, () => new HttpResponse(null, { status: 204 })),
 ]

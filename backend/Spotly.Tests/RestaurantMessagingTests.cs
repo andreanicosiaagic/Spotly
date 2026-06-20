@@ -41,7 +41,11 @@ public class RestaurantMessagingTests
         var date = DateOnly.FromDateTime(DateTime.UtcNow);
         var start = await repository.BeginRestaurantBookingAsync(new LunchBooking
         {
-            RestaurantId = "R01", UserId = "restaurant-user", BookingDate = date,
+            RestaurantId = "R01",
+            SlotId = $"S01-{date:yyyyMMdd}",
+            UserId = "restaurant-user",
+            BookingDate = date,
+            MenuItemIds = [$"M01-{date:yyyyMMdd}"],
         });
         Assert.True(start.Attempt.Succeeded);
         var pending = start.Attempt.Booking!;
@@ -74,7 +78,7 @@ public class RestaurantMessagingTests
         var factory = new TestDbContextFactory(options);
         await using var db = factory.CreateDbContext();
         await SpotlyDbSeeder.SeedAsync(db, DateOnly.FromDateTime(DateTime.UtcNow));
-        return new(factory);
+        return new(factory, TimeProvider.System);
     }
 
     private sealed class TestDbContextFactory(DbContextOptions<SpotlyDbContext> options) : IDbContextFactory<SpotlyDbContext>

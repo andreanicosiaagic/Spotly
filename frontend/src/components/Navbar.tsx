@@ -1,5 +1,7 @@
 import { NavLink } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
+import { useLogoClickEasterEgg } from '../hooks/use-logo-click-easter-egg'
+import { DEMO_PROFILES } from '../mocks/data/users'
 import { AppIcon } from './AppIcon'
 
 const navigation = [
@@ -9,22 +11,39 @@ const navigation = [
   { to: '/lunch', label: 'Pranzo', icon: 'restaurant' },
 ]
 
-export function Navbar() {
-  const { user } = useAuth()
+interface NavbarProps {
+  onLogoActivate: () => void
+}
+
+export function Navbar({ onLogoActivate }: NavbarProps) {
+  const { profile, setProfileId, user } = useAuth()
+  const handleLogoClick = useLogoClickEasterEgg(onLogoActivate)
   const initials = user?.name.split(' ').map(part => part[0]).slice(0, 2).join('') ?? 'SP'
   return <>
     <aside className="desktop-sidebar">
-      <NavLink to="/" className="brand-lockup"><img src="/spotly-logo.png" alt="Spotly" /></NavLink>
+      <NavLink to="/" onClick={handleLogoClick} className="brand-lockup"><img src="/spotly-logo.png" alt="Spotly" /></NavLink>
       <nav className="sidebar-nav" aria-label="Navigazione principale">
         {navigation.map(item => <NavItem key={item.to} {...item} />)}
       </nav>
       <div className="sidebar-user">
-        <div className="avatar">{initials}</div><div><strong>{user?.name}</strong><span>{user?.roles[0]} · Team Product</span></div>
+        <div className="avatar">{initials}</div><div className="min-w-0 flex-1"><strong>{user?.name}</strong><span>{user?.roles[0]} · Team Product</span>
+          {import.meta.env.DEV && <label className="mt-2 block text-[10px] font-semibold text-[#7B7266]">
+            Profilo demo
+            <select value={profile.id} onChange={(event) => setProfileId(event.target.value)} className="mt-1 block w-full rounded-[10px] border border-border bg-white px-2 py-2 text-[12px] text-text">
+              {DEMO_PROFILES.map((option) => <option key={option.id} value={option.id}>{option.roles[0]} · {option.name}</option>)}
+            </select>
+          </label>}
+        </div>
       </div>
     </aside>
     <header className="mobile-header">
-      <NavLink to="/" className="mobile-brand"><img src="/spotly-logo.png" alt="Spotly" /></NavLink>
-      <div className="avatar">{initials}</div>
+      <NavLink to="/" onClick={handleLogoClick} className="mobile-brand"><img src="/spotly-logo.png" alt="Spotly" /></NavLink>
+      <div className="flex items-center gap-2">
+        {import.meta.env.DEV && <select aria-label="Profilo demo" value={profile.id} onChange={(event) => setProfileId(event.target.value)} className="max-w-[150px] rounded-[10px] border border-border bg-white px-2 py-2 text-[12px] text-text">
+          {DEMO_PROFILES.map((option) => <option key={option.id} value={option.id}>{option.roles[0]}</option>)}
+        </select>}
+        <div className="avatar">{initials}</div>
+      </div>
     </header>
     <nav className="mobile-bottom-nav" aria-label="Navigazione principale">
       {navigation.map(item => <NavItem key={item.to} {...item} />)}

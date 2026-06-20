@@ -50,12 +50,15 @@ public class LunchBooking
     public bool IsLunchBox { get; set; }
     public string? LunchBoxId { get; set; }
     public string? Allergens { get; set; }
+    public List<string> MenuItemIds { get; set; } = [];
+    public DateTime CreatedAtUtc { get; set; }
     public DeliveryStatus DeliveryStatus { get; set; } = DeliveryStatus.Pending;
     public BookingStatus Status { get; set; } = BookingStatus.Active;
     public PartnerBookingStatus PartnerStatus { get; set; } = PartnerBookingStatus.NotRequired;
     public string? PartnerCode { get; set; }
     public string? PartnerReference { get; set; }
     public string? PartnerCorrelationId { get; set; }
+    public DateTime? PartnerPendingExpiresAtUtc { get; set; }
     public int? PartnerAvailableSeats { get; set; }
     public DateTime? PartnerRespondedAtUtc { get; set; }
 }
@@ -67,6 +70,7 @@ public class RestaurantAvailability
     public int AvailableSeats { get; set; }
     public int PendingSeats { get; set; }
     public long Sequence { get; set; }
+    public long LastPartnerSequence { get; set; }
     public string LastMessageId { get; set; } = string.Empty;
     public DateTime UpdatedAtUtc { get; set; }
     public string Source { get; set; } = "telegram-mock";
@@ -75,7 +79,9 @@ public class RestaurantAvailability
 public class RestaurantPartnerMessage
 {
     public string MessageId { get; set; } = string.Empty;
+    public string LocationId { get; set; } = string.Empty;
     public string RestaurantId { get; set; } = string.Empty;
+    public DateOnly BookingDate { get; set; }
     public string Kind { get; set; } = string.Empty;
     public long Sequence { get; set; }
     public DateTime ReceivedAtUtc { get; set; }
@@ -84,13 +90,15 @@ public class RestaurantPartnerMessage
 }
 
 public record RestaurantAvailabilityView(
+    string LocationId,
     string RestaurantId,
     string Name,
     int Capacity,
     int AvailableSeats,
     long Sequence,
     DateTime UpdatedAtUtc,
-    bool PartnerChannelConfigured);
+    bool PartnerChannelConfigured,
+    long PartnerSequence);
 
 public record PartnerAvailabilityMessage(
     string MessageId,
@@ -104,8 +112,10 @@ public record PartnerBookingCommand(
     string CorrelationId,
     string RestaurantId,
     DateOnly BookingDate,
+    string SlotId,
     int PartySize,
-    int AvailableBeforeConfirmation);
+    int AvailableBeforeConfirmation,
+    IReadOnlyList<string> MenuItemIds);
 
 public record PartnerBookingResult(
     string CorrelationId,
@@ -114,6 +124,22 @@ public record PartnerBookingResult(
     string Code,
     int RemainingSeats,
     string? PartnerReference)
+{
+    public bool Confirmed => Code == "OK";
+}
+
+public record PartnerCancellationCommand(
+    string CorrelationId,
+    string RestaurantId,
+    DateOnly BookingDate,
+    string SlotId,
+    string PartnerReference);
+
+public record PartnerCancellationResult(
+    string CorrelationId,
+    string RestaurantId,
+    DateOnly BookingDate,
+    string Code)
 {
     public bool Confirmed => Code == "OK";
 }

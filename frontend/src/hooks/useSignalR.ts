@@ -1,41 +1,46 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as signalR from '@microsoft/signalr'
-import type { AvailabilityUpdate, RestaurantAvailabilityUpdate, RestaurantMessageEvent } from '../types'
+import { apiUrl, getAuthToken } from '../lib/api'
+import type {
+  AvailabilityUpdate,
+  RealtimeStatus,
+  RestaurantAvailabilityUpdate,
+  RestaurantMessageEvent,
+} from '../types'
 
 export function useSignalR(
-  sedeId: string,
+  locationId: string,
   date: string,
-  onUpdate: (update: AvailabilityUpdate) => void
+  onUpdate: (update: AvailabilityUpdate) => void,
 ) {
   const connectionRef = useRef<signalR.HubConnection | null>(null)
+  const [status, setStatus] = useState<RealtimeStatus>('connecting')
 
   useEffect(() => {
-    const apiUrl = import.meta.env.VITE_API_URL ?? ''
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${apiUrl}/availability`)
-      .withAutomaticReconnect()
-      .configureLogging(signalR.LogLevel.Warning)
-      .build()
-
+    const connection = buildConnection()
     connectionRef.current = connection
-
-    connection.on('ResourceStatusChanged', (update: AvailabilityUpdate) => {
-      onUpdate(update)
+    connection.on('ResourceStatusChanged', onUpdate)
+    connection.onreconnecting(() => setStatus('reconnecting'))
+    connection.onreconnected(async () => {
+      setStatus('connected')
+      await connection.invoke('JoinGroup', locationId, date)
     })
+    connection.onclose(() => setStatus('offline'))
 
-    connection
+    void connection
       .start()
-      .then(() => connection.invoke('JoinGroup', sedeId, date))
-      .catch(() => {
-        // SignalR not available in dev with MSW — silent fail
+      .then(async () => {
+        setStatus('connected')
+        await connection.invoke('JoinGroup', locationId, date)
       })
+      .catch(() => setStatus('offline'))
 
     return () => {
-      connection.stop()
+      void connection.stop()
     }
-  }, [sedeId, date, onUpdate])
+  }, [date, locationId, onUpdate])
 
-  return connectionRef
+  return { connectionRef, status }
 }
 
 export function useRestaurantSignalR(
@@ -43,18 +48,45 @@ export function useRestaurantSignalR(
   onAvailability: (update: RestaurantAvailabilityUpdate) => void,
   onMessage: (event: RestaurantMessageEvent) => void,
 ) {
+  const [status, setStatus] = useState<RealtimeStatus>('connecting')
+
   useEffect(() => {
-    const apiUrl = import.meta.env.VITE_API_URL ?? ''
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${apiUrl}/availability`)
-      .withAutomaticReconnect()
-      .configureLogging(signalR.LogLevel.Warning)
-      .build()
-    connection.on('RestaurantAvailabilityChanged', onAvailability)
-    connection.on('RestaurantMessageReceived', onMessage)
-    connection.start()
-      .then(() => connection.invoke('JoinGroup', 'HQ', date))
-      .catch(() => undefined)
-    return () => { void connection.stop() }
+    const connection = buildConnection()
+    connection.on('RestaurantAvailabilityChanged', (update: RestaurantAvailabilityUpdate) => {
+      if (update.bookingDate === date) onAvailability(update)
+    })
+    connection.on('RestaurantMessageReceived', (event: RestaurantMessageEvent) => {
+      if (event.bookingDate === date) onMessage(event)
+    })
+    connection.onreconnecting(() => setStatus('reconnecting'))
+    connection.onreconnected(async () => {
+      setStatus('connected')
+      await connection.invoke('JoinGroup', 'HQ', date)
+    })
+    connection.onclose(() => setStatus('offline'))
+
+    void connection
+      .start()
+      .then(async () => {
+        setStatus('connected')
+        await connection.invoke('JoinGroup', 'HQ', date)
+      })
+      .catch(() => setStatus('offline'))
+
+    return () => {
+      void connection.stop()
+    }
   }, [date, onAvailability, onMessage])
+
+  return status
+}
+
+function buildConnection() {
+  return new signalR.HubConnectionBuilder()
+    .withUrl(apiUrl('/availability'), {
+      accessTokenFactory: () => getAuthToken() ?? '',
+    })
+    .withAutomaticReconnect()
+    .configureLogging(signalR.LogLevel.Warning)
+    .build()
 }

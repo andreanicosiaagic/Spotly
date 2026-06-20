@@ -11,7 +11,7 @@ public interface IParkingRepository
     Task<BookingAttempt<ParkingBooking>> TryCreateBookingAsync(ParkingBooking booking);
     Task<CancellationOutcome> CancelBookingAsync(string bookingId, string userId, DateTime utcNow);
     Task<bool> CheckInAsync(string bookingId, string userId, DateTime utcNow);
-    Task<bool> TryAcquireLockAsync(string spotId, string userId, TimeSpan lockDuration);
+    Task<bool> TryAcquireLockAsync(string spotId, string userId, DateOnly bookingDate, TimeSpan lockDuration);
     Task<IReadOnlyList<ReleasedResource>> ReleaseExpiredLocksAsync(DateTime utcNow);
     Task<IReadOnlyList<ReleasedResource>> ReleaseNoShowsAsync(DateTime utcNow);
 }
